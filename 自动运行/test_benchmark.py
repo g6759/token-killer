@@ -236,6 +236,9 @@ class BenchmarkTests(unittest.TestCase):
             work = results / "吞吐对照-实跑-并发度-测试"
             profile = {"model": "test", "effort": "high", "account": "local"}
             dropped = Event()
+            control_lanes = Barrier(4)
+            resumed_lanes = Barrier(2)
+            resuming = False
 
             def infer(request, seconds, abort, *, on_sent):
                 on_sent()
@@ -246,14 +249,19 @@ class BenchmarkTests(unittest.TestCase):
                     sleep(seconds + 0.01)
                     raise TimeoutError("本组计时结束")
                 started = monotonic()
-                sleep(0.06)
+                # Establish actual overlapping requests even on a slow hosted runner.
+                if resuming:
+                    resumed_lanes.wait(timeout=seconds)
+                elif (work / "mixed-four" / "window.json").is_file():
+                    control_lanes.wait(timeout=seconds)
+                sleep(0.02)
                 return {"text": json.dumps(request["candidate"]), "model": "test",
                         "reasoning_effort": "high", "response_id": str(monotonic_ns()),
                         "provider_started": started,
                         "usage": {"input_tokens": 11, "cached_input_tokens": 0, "output_tokens": 6}}
 
             scenarios = benchmark.PLANS["concurrency"]
-            first = benchmark._run_suite(root, work, scenarios, infer, seconds=1, live=True,
+            first = benchmark._run_suite(root, work, scenarios, infer, seconds=3, live=True,
                                          abort=Event(), profile=profile)
             self.assertEqual(first["scenarios"]["mixed"]["stop"], "window")
             self.assertFalse(first["scenarios"]["mixed"]["comparable"])
@@ -263,7 +271,8 @@ class BenchmarkTests(unittest.TestCase):
             self.assertTrue(first["incomplete"])
             self.assertEqual(benchmark.resumable_run(results), work)
 
-            resumed = benchmark._run_suite(root, work, scenarios, infer, seconds=1, live=True,
+            resuming = True
+            resumed = benchmark._run_suite(root, work, scenarios, infer, seconds=3, live=True,
                                            abort=Event(), resume=True, profile=profile)
             self.assertTrue(resumed["scenarios"]["mixed"]["comparable"])
             self.assertFalse(resumed["incomplete"])
