@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>token-killer</title>
+  <link rel="stylesheet" href="/lab.css">
+  <link rel="stylesheet" href="/research.css">
+  <script defer src="/research.js"></script>
+</head>
+<body>
+  <main>
+    <header class="research-head">
+      <a id="back" href="/">← token-killer</a>
+      <div class="language-switch" role="group" aria-label="Language / 语言"><button id="lang-zh" type="button">中文</button><button id="lang-en" type="button">English</button></div>
+    </header>
+    <h1 id="title"></h1><p id="intro"></p>
+    <div class="workspace">
+      <section class="workbench" aria-labelledby="puzzle-label">
+        <div class="bench-head"><label id="puzzle-label" for="packs"></label><select id="packs"></select></div>
+        <div id="editor"></div>
+        <div class="examples"><button type="button" class="secondary" id="demo" disabled></button><button type="button" class="secondary" id="reference" hidden></button></div>
+        <canvas id="plot" width="760" height="300" hidden></canvas>
+        <p id="plot-caption" class="legend" hidden></p>
+        <div class="toolbar"><button id="check" disabled></button><button class="secondary" id="save" disabled></button><button class="secondary" id="reset" disabled></button></div>
+        <p id="notice" role="status" aria-live="polite"></p>
+      </section>
+      <aside>
+        <h2 id="score-label"></h2><output id="score">—</output>
+        <p id="parent"></p><dl id="audit"></dl>
+        <section class="model"><h2 id="model-title"></h2><p id="model-copy"></p><a href="/" id="monitor"></a></section>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

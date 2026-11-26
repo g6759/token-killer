@@ -1,0 +1,31 @@
+.research-head { display:flex;align-items:center;justify-content:space-between;padding-bottom:17px;border-bottom:1px solid var(--line);margin-bottom:26px }
+.research-head a,.model a { color:var(--green);font-weight:600 }
+#title { font-size:clamp(2rem,5vw,3.5rem);line-height:1.05;overflow-wrap:anywhere }
+#intro { max-width:74ch;line-height:1.6;margin:14px 0 22px }
+.workspace { display:grid;grid-template-columns:minmax(0,1.85fr) minmax(205px,1fr);gap:clamp(16px,4vw,46px);align-items:start }
+.workbench { margin:0;padding:clamp(16px,3vw,28px);border:1px solid var(--line);background:#fcfbf6 }
+.bench-head,.toolbar,.slices { display:flex;align-items:center;gap:10px;flex-wrap:wrap }
+.bench-head { justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:19px }
+.bench-head label,#editor label { font-weight:650;font-size:.9rem }
+select,input,textarea { font:inherit;color:var(--ink) }
+select,input[type=text],textarea { border:1px solid #a4ad9c;background:white;padding:6px;max-width:100% }
+input[type=text],textarea { width:100%;font-family:ui-monospace,monospace }
+input[type=range] { width:min(100%,430px);accent-color:var(--green);display:block;margin:15px 0 }
+.slices { margin:10px 0 }
+.slices label { display:grid;gap:4px;text-align:center }
+.point-grid { display:grid;grid-template-columns:repeat(3,1fr);max-width:290px;gap:4px;margin:12px auto }
+.point-grid button { min-height:43px;background:#edf0e5;color:#52614f;border:1px solid #cad1be;font-size:.85rem }
+.point-grid button[aria-pressed=true] { background:var(--green);color:white }
+.toolbar { margin-top:18px }
+.examples { display:flex;gap:8px;flex-wrap:wrap;margin-top:8px }
+button { cursor:pointer } button:disabled { cursor:default;opacity:.5 }
+#notice { min-height:1.5em;margin-top:14px;overflow-wrap:anywhere }
+#plot { width:100%;height:auto;margin:14px 0 0;background:#f3f0e5 }
+#plot[hidden] { display:none }
+.legend,#parent,.model p,.hint { color:var(--dim);font-size:.9rem;line-height:1.5;margin:8px 0 }
+output { display:block;font-size:2.2rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--green) }
+#audit { display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:.9rem }
+#audit dd { margin:0;font-variant-numeric:tabular-nums }
+.model { border-top:1px solid var(--line);padding-top:18px;margin-top:20px }
+.model a { display:block;margin-top:12px;font-size:.9rem }
+@media(max-width:720px) { .workspace {grid-template-columns:1fr} .workbench {padding:14px} }

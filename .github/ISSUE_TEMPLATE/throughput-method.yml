@@ -1,0 +1,71 @@
+name: 玩法挑战 / Throughput method
+description: Propose or report a reproducible game method. / 提出或报告可复现的游戏方法。
+title: "[玩法 / Method] "
+body:
+  - type: dropdown
+    id: stage
+    attributes:
+      label: 阶段 / Stage
+      description: 选择想法、试跑或已核验结果。 / Choose an idea, pilot, or verified result.
+      options:
+        - 想法待测 / Idea only
+        - 短测或中断 / Pilot or interrupted run
+        - 完整窗口已核验 / Complete window verified
+    validations:
+      required: true
+  - type: dropdown
+    id: game
+    attributes:
+      label: 游戏与题包 / Game and pack
+      description: 选择玩法并填写实际题包 ID；正式场景 ID 与题包 ID 相同。 / Select the game and give its pack ID; the formal scenario ID matches the pack ID.
+      options:
+        - 方格装箱 / Square packing
+        - 四境驿站 / Four Realms Relay
+        - Cap Set
+        - Golomb 尺 / Golomb ruler
+        - 超维递归模拟器 / Hyperdimensional Recursive Simulator
+        - 其他 / Other
+    validations:
+      required: true
+  - type: dropdown
+    id: metric
+    attributes:
+      label: 计分口径 / Metric
+      description: 速度赛用单个完整600秒窗，非缓存输入加输出总量除以10；累计总量赛可变时长，只汇总不重叠完整600秒窗，按唯一回包去重并注明总时长。 / Speed uses one complete 600-second window and divides uncached input plus output by 10. Cumulative total uses variable duration, sums non-overlapping complete 600-second windows, deduplicates unique replies, and states total elapsed time.
+      options:
+        - 仅想法，无实测指标 / Idea, no measured metric
+        - 速度赛 / Speed
+        - 累计总量赛 / Cumulative total
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: 你的玩法 / Method
+      description: 说明假设、改变的变量、基线和为何值得尝试。可提交负结果。 / Describe the hypothesis, changed variable, baseline, and why it is worth trying. Negative results are welcome.
+      placeholder: |
+        游戏与题包 ID / Game and pack ID:
+        方法与基线 / Method and baseline:
+        预期或负结果 / Hypothesis or negative result:
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现条件 / Reproduction
+      description: 填平台、模型、推理强度、并发、起始存档、场景 ID、命令和实际运行时长。研究题入口为 `/research?game=<id>`；累计赛用 `python -B benchmark_proof.py --series <first-window-dir> <second-window-dir>`。 / Include platform, model, reasoning effort, concurrency, starting save, scenario ID, command, and elapsed time. Research games use `/research?game=<id>`; cumulative series use `python -B benchmark_proof.py --series <first-window-dir> <second-window-dir>`.
+  - type: textarea
+    id: throughput_result
+    attributes:
+      label: 吞吐结果 / Throughput result
+      description: 速度赛请给完整600秒窗的非缓存输入、输出、总有效Token、除以10后的Token/分钟、十个一分钟桶和唯一完整回包数。累计总量赛请给总时长、完整窗口数、每窗和总有效Token、去重完整回包数；未满600秒尾段另列。无实测可留空。 / For speed, give uncached input, output, total effective tokens, tokens/minute (total divided by 10), ten one-minute buckets, and unique completed replies. For cumulative total, give elapsed time, complete window count, per-window and total effective tokens, and deduplicated completed replies; list any incomplete tail separately. Leave blank if unmeasured.
+  - type: textarea
+    id: math_result
+    attributes:
+      label: 数学结果 / Mathematical result
+      description: 与吞吐分开报告题包 ID、父档分数、候选分数、总量和指标。Cap Set填写维度/点数；Golomb填写刻度数/长度/差值互异；四境填写覆盖站点对；方格填写有效布局/外框；Lorenz填写认证状态/越线时间。注明历史参考或玩家自研。 / Report separately from throughput: pack ID, parent score, candidate score, total, and metrics. Cap Set: dimension and points; Golomb: mark count, length, and unique differences; Four Realms: covered station pairs; Square: valid layout and enclosing square; Lorenz: certification and crossing time. Label historical references separately from player-created work.
+  - type: textarea
+    id: receipt_summary
+    attributes:
+      label: 脱敏回执汇总 / Redacted receipt summary
+      description: 可贴校验命令和脱敏汇总，不要求上传原始存档。不要包含用户私下档案、私人跑分、个人/账户/任务ID、quota读数、绝对路径、原始私密请求/回复或授权信息。只分享有权共享的材料并保留原文与许可边界。 / Share a verification command and redacted summary; raw archives are not required. Do not include private user archives, private runs, personal/account/task IDs, quota readings, absolute paths, raw private prompts/replies, or authorization details. Share only material you are allowed to share and preserve source and license boundaries.

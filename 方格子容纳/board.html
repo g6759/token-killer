@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>方格子容纳 · 制图台</title>
+<style>
+:root{--paper:#f6f4ed;--white:#fffefa;--ink:#253b3e;--muted:#58696b;--line:#ccd2cb;--green:#37665d;--orange:#af522c;--wash:#e5ece4;--red:#a03528}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.65 "Microsoft YaHei","PingFang SC",system-ui,sans-serif}button,input,select,textarea{font:inherit}button,a,input,select,textarea{touch-action:manipulation}button{cursor:pointer}button:disabled{cursor:wait;opacity:.55}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #bf6b36;outline-offset:3px}a{color:var(--green);text-underline-offset:4px}header{max-width:1420px;margin:auto;padding:28px 36px 22px;display:flex;justify-content:space-between;align-items:center;gap:24px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:16px}.mark{width:42px;height:42px;border:2px solid var(--ink);position:relative;flex:none}.mark:before,.mark:after{content:"";position:absolute;width:18px;height:18px;border:1px solid var(--green);background:var(--wash)}.mark:before{left:2px;top:2px}.mark:after{right:2px;bottom:2px;transform:rotate(22deg)}h1{font-family:"SimSun","Songti SC",serif;font-size:27px;font-weight:600;letter-spacing:2px;line-height:1.25;margin:0}.eyebrow{font-size:11px;letter-spacing:2px;color:var(--muted);margin-top:5px}.topnote{font-size:12px;text-align:right;color:var(--muted)}main{max-width:1420px;margin:auto;padding:27px 36px 40px}.intro{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:25px}.intro p{margin:6px 0 0;color:var(--muted);max-width:650px}.intro h2{font-size:18px;margin:0;font-weight:500}.selectbox{display:flex;align-items:center;gap:10px;white-space:nowrap}select,input{border:1px solid var(--line);background:var(--white);color:var(--ink);padding:9px 11px;border-radius:2px;min-height:44px}select{min-width:115px}.workspace{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(315px,1fr);gap:28px;align-items:start}.drawing{background:var(--white);border:1px solid var(--line)}.drawing-head{padding:14px 19px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.smallcap{font-size:12px;letter-spacing:1px}.tag{font-size:11px;color:var(--green);border:1px solid #a7bbb0;padding:2px 8px;background:#f1f5ef}.plot{position:relative;aspect-ratio:1.16;background-image:linear-gradient(#e8e9df66 1px,transparent 1px),linear-gradient(90deg,#e8e9df66 1px,transparent 1px);background-size:24px 24px;overflow:hidden}.plot svg{width:100%;height:100%;display:block}.plot-empty{position:absolute;inset:0;display:grid;place-content:center;color:var(--muted);padding:30px;text-align:center}.plot-empty[hidden]{display:none}.plot svg polygon{transition:fill .15s;cursor:default}.plot svg polygon:hover,.plot svg polygon:focus{fill:#d8af80;outline:none;stroke:var(--orange);stroke-width:3}.plot-footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding:12px 18px;color:var(--muted);font-size:12px}.legend{display:inline-flex;align-items:center;gap:7px}.legend:before{content:"";width:12px;height:12px;border:1px solid var(--green);background:#dbe7db}.measures{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}.measure{padding:18px 20px;min-width:0}.measure+ .measure{border-left:1px solid var(--line)}.label{font-size:12px;color:var(--muted)}.number{font:29px/1.3 "Cascadia Code",Consolas,monospace;margin-top:5px;letter-spacing:-1px;overflow-wrap:anywhere}.unit{font-size:11px;color:var(--muted);margin-left:4px}.secondary{padding:14px 20px;font-size:13px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.good{color:var(--green)}.panel{border-top:2px solid var(--ink);padding-top:17px;margin-bottom:28px}.step{display:flex;gap:12px;align-items:baseline;margin-bottom:9px}.step span{font:12px Consolas,monospace;color:var(--orange)}h3{font-size:17px;font-weight:500;margin:0}.hint{font-size:13px;color:var(--muted);margin:5px 0 14px}.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.btn{border:1px solid var(--ink);background:var(--ink);color:#fffefa;min-height:44px;padding:10px 17px;border-radius:2px;font-size:13px}.btn:hover{background:#385458}.btn.secondary-btn{color:var(--ink);background:transparent;border-color:var(--line)}.btn.secondary-btn:hover{border-color:var(--ink);background:#eeeee6}.rounds{display:flex;gap:0;flex-wrap:wrap}.rounds label{padding:7px 10px;border:1px solid var(--line);min-height:39px;font-size:12px;cursor:pointer;background:var(--white)}.rounds label+label{border-left:0}.rounds label:has(input:checked){background:var(--wash);color:var(--green)}.rounds input{min-height:0;padding:0;accent-color:var(--green);vertical-align:middle;margin:0 4px 0 0}.field{display:block;margin:11px 0 5px;font-size:12px;color:var(--muted)}textarea{width:100%;resize:vertical;min-height:138px;border:1px solid var(--line);border-radius:2px;background:var(--white);padding:12px;color:var(--ink);font:12px/1.6 Consolas,"Microsoft YaHei",monospace;tab-size:2}#missionText{min-height:180px}#author{width:100%;max-width:260px}details{font-size:12px;color:var(--muted);margin-top:12px}summary{cursor:pointer;min-height:32px;padding:5px 0}details p{margin:6px 0}#status{font-size:13px;min-height:24px;margin:12px 0 0;overflow-wrap:anywhere;color:var(--green)}#status.error{color:var(--red)}.reference{margin-top:24px;border-top:1px solid var(--line);padding-top:16px}.reference h3{font-size:14px}.bounds{display:grid;grid-template-columns:1fr 1fr;margin:12px 0;gap:12px}.bound{border-left:2px solid var(--line);padding-left:12px;min-width:0}.bound strong{display:block;font:16px/1.5 Consolas,monospace;margin-top:3px;overflow-wrap:anywhere}.reference p{font-size:12px;color:var(--muted);margin:7px 0}.record{margin-top:31px;border-top:1px solid var(--line);padding-top:20px}.record-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:12px}.record-head h3{font-size:16px}.record-head a{font-size:12px;white-space:nowrap}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px;text-align:left}th{font-weight:400;font-size:11px;color:var(--muted);border-bottom:1px solid var(--line);padding:10px 12px}td{padding:11px 12px;border-bottom:1px solid #dde0d8}td:nth-child(n+3){font-family:Consolas,monospace}td:first-child{color:var(--muted);width:64px}td:nth-child(2){max-width:220px;overflow-wrap:anywhere}.empty-row{font-size:13px;color:var(--muted);padding:14px 0}.footer{margin-top:27px;padding-top:15px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}.hash{font-family:Consolas,monospace;overflow-wrap:anywhere}.source-links{display:flex;gap:16px;flex-wrap:wrap}#boardTitle{font-size:13px}.submit-row{margin-top:14px}.check-note{font-size:11px;color:var(--muted);margin-top:9px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}@media(min-width:1150px){.plot{aspect-ratio:1.2}}@media(max-width:850px){header{padding:22px 22px 18px}main{padding:22px}.workspace{grid-template-columns:1fr;gap:27px}.plot{aspect-ratio:1.2}.right{display:grid;grid-template-columns:1fr 1fr;gap:24px}.right .panel{margin-bottom:0}.intro{align-items:start}.number{font-size:27px}}@media(max-width:560px){header{padding:20px 16px}.topnote{display:none}main{padding:20px 16px 28px}h1{font-size:24px}.intro{display:block;margin-bottom:19px}.selectbox{margin-top:17px;justify-content:space-between}.intro p{font-size:13px}.right{display:block}.right .panel{margin-bottom:24px}.plot{aspect-ratio:1.04}.measure{padding:14px}.number{font-size:24px}.secondary{padding:12px 14px}.record-head{align-items:start;flex-wrap:wrap}.drawing-head{padding:12px}.tag{font-size:10px}.bounds{gap:8px}.bound strong{font-size:14px}td,th{padding:9px 8px}}
+input[type="checkbox"]{min-height:0;accent-color:var(--green);vertical-align:middle;margin-right:5px}
+.manual-entry{font-size:14px;margin:0;color:var(--ink)}.manual-entry>summary{font-weight:650}.manual-entry .panel{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.manual-entry .step{display:block}.manual-entry .step span{display:none}.manual-entry summary:focus-visible{outline:3px solid #bf6b36;outline-offset:3px}
+.overview{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(315px,1fr);gap:28px;align-items:start;margin-bottom:24px}
+.scorecard{border:1px solid var(--line);border-top:2px solid var(--green);background:var(--white)}
+.scorecard .measures{grid-template-columns:minmax(0,1.14fr) minmax(0,.75fr) minmax(0,1.2fr)}
+.scorecard .measure{padding:15px 19px;container-type:inline-size}.scorecard .number{display:inline-block;font-size:clamp(19px,2.45vw,28px);letter-spacing:-.6px}
+.scorecard #area{font-size:clamp(14px,11cqw,28px);white-space:nowrap}
+.scorecard .unit{display:block;margin:4px 0 0}
+.award{padding:14px 19px;min-width:0;border-right:1px solid var(--line)}
+.award h3{font-family:"SimSun","Songti SC",serif;font-size:24px;font-weight:700;margin:2px 0;overflow-wrap:anywhere}
+.award p{margin:2px 0;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.award #titleHolder{color:var(--ink)}
+.award details{margin-top:3px}.award summary{min-height:30px;padding:4px 0;color:var(--green)}
+.award ul{padding-left:1.4em;margin:2px 0}.award li+li{margin-top:4px}.award li strong{color:var(--ink);margin-right:.5em}
+.scorecard .secondary{padding:8px 19px;font-size:12px}
+.score-method{margin:0;padding:0 19px 12px;color:var(--muted);font-size:11px}
+.reference{margin:0;border-top:2px solid var(--ink);padding-top:13px}.reference h3{font-size:17px}
+.reference .bounds{margin:13px 0}.reference .bound strong{font-size:16px}.reference .bound:has(#upper){border-color:var(--green)}
+.reference #referenceGap{font-size:14px;font-weight:600;color:var(--ink);margin:0 0 7px}
+.reference .source-links{display:grid;gap:0;list-style:none;margin:13px 0 10px;padding:0;border-top:1px solid var(--line)}
+.reference .source-links li{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:3px 12px;padding:7px 0;border-bottom:1px solid var(--line)}
+.reference .source-links li[hidden]{display:none}
+.source-links a{font-size:13px}.source-links time{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.reference .source-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:12px}
+.reference #referenceStatus{overflow-wrap:anywhere;color:var(--green);margin:7px 0 0}.reference #referenceStatus.error{color:var(--red)}
+.reference #referenceStatus:empty{margin:0}#syncReference[aria-disabled="true"]{cursor:wait;opacity:.65}
+@media(max-width:850px){.overview{grid-template-columns:1fr;gap:22px}.right{display:block}}
+@media(max-width:560px){.scorecard .measures{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.scorecard .award{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line)}.scorecard .measure,.scorecard .award{padding:11px 12px}.scorecard .secondary{padding:7px 12px}.score-method{padding:0 12px 9px}.scorecard .number{font-size:17px}.scorecard #area{font-size:clamp(14px,11cqw,18px)}.award h3{font-size:21px}}
+</style>
+<style>
+.batch-dashboard{margin:0 0 29px;border:1px solid var(--line);border-top:3px solid var(--ink);background:var(--white)}
+.batch-dashboard [hidden]{display:none!important}
+.batch-header,.batch-controls,.batch-plan,.batch-results,.batch-takeover{padding:16px 20px}
+.batch-header,.batch-results-head,.batch-case-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.batch-header{border-bottom:1px solid var(--line)}
+.batch-header h2{margin:0;font-family:"SimSun","Songti SC",serif;font-size:22px;line-height:1.4}
+.batch-header-actions{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;font-size:12px}
+.batch-header p,.batch-dashboard p{margin:4px 0 0}
+.batch-muted,.batch-dashboard small{color:var(--muted);font-size:12px}
+.batch-columns{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(0,1.15fr)}
+.batch-controls{border-right:1px solid var(--line)}
+.batch-controls fieldset{border:0;margin:0 0 12px;padding:0;min-width:0}
+.batch-controls legend{padding:0;margin-bottom:6px;font-size:13px;font-weight:650}
+.batch-options{display:flex;gap:6px;flex-wrap:wrap}
+.batch-options label{min-height:35px;padding:6px 9px;border:1px solid var(--line);background:var(--white);font-size:12px;cursor:pointer}
+.batch-options label:has(input:checked){background:var(--wash);border-color:#819f93;color:var(--green);font-weight:600}
+.batch-options label:has(input:disabled){opacity:.55;cursor:default}
+.batch-options input{min-height:0;margin:0 5px 0 0;accent-color:var(--green);vertical-align:middle}
+.batch-config{display:flex;column-gap:22px;flex-wrap:wrap}
+.batch-estimate{display:flex;gap:4px 14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:3px 0 13px}
+.batch-estimate strong{font-weight:650;color:var(--ink)}
+.batch-error{color:var(--red);font-size:13px;overflow-wrap:anywhere}
+.batch-feedback{padding:10px 20px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.batch-feedback p{margin:0}
+.batch-plan{display:grid;grid-template-columns:minmax(112px,1fr) minmax(0,1.2fr);gap:13px;align-items:center;background:#eef1e9}
+.batch-plan h3{font-weight:650}
+.batch-plan p{overflow-wrap:anywhere;font-size:13px}
+.batch-progress-number{font:clamp(24px,4vw,36px)/1.25 "Cascadia Code",Consolas,monospace;color:var(--green);margin-top:3px;white-space:nowrap}
+.batch-tower-frame{min-width:0;min-height:150px;align-self:stretch;display:grid;place-items:end center;padding:8px 10px 0;border:1px solid #d3ddd1;background-color:#f4f6ef;background-image:linear-gradient(#dbe5d898 1px,transparent 1px),linear-gradient(90deg,#dbe5d898 1px,transparent 1px);background-size:16px 16px}
+.batch-tower-scroll{width:100%;max-height:210px;overflow:auto;padding:11px 17px 16px 9px}
+.batch-tower{display:flex;flex-direction:column-reverse;width:min(88%,154px);min-width:50px;position:relative;margin:0 auto;padding:0;list-style:none;transform:skewY(-5deg)}
+.batch-foundation{position:relative;height:10px;margin:0 auto;width:min(100%,172px);background:#6c8175;border-bottom:3px solid #425d50;transform:skewY(-5deg)}
+.batch-floor{display:block;position:relative;width:100%;height:24px;padding:0;text-align:center;border:1px solid #31594f;background:repeating-linear-gradient(90deg,#548271 0 12px,#aac3ad 12px 14px);color:#fff;font:12px/1 Consolas,monospace;text-shadow:0 1px 1px #153631}
+.batch-floor::after{content:"";position:absolute;top:0;left:100%;width:11px;height:100%;border:1px solid #31594f;background:#37665d;transform-origin:left;transform:skewY(36deg)}
+.batch-floor[data-public-candidate]{background:repeating-linear-gradient(90deg,#9b603a 0 12px,#e6bc85 12px 14px);border-color:#764322}
+.batch-floor[data-public-candidate]::after{background:#80502e;border-color:#764322}
+.batch-floor[aria-pressed="true"]{outline:2px solid #263e3e;outline-offset:1px;z-index:1}
+.batch-floor span{background:#29453d;padding:2px 4px;border-radius:1px}
+.batch-floor-new{animation:batch-floor-arrive .36s ease-out both}
+@keyframes batch-floor-arrive{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.batch-results,.batch-takeover{border-top:1px solid var(--line)}
+.batch-usage{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.batch-takeover{background:#eff3eb;display:grid;gap:7px;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.batch-takeover textarea{grid-column:1/-1;min-height:61px;font-size:12px;resize:vertical}
+.batch-case{padding:12px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(130px,.8fr) minmax(0,2.5fr) 90px;gap:5px 14px;align-items:start}
+.batch-case:first-child{margin-top:11px}
+.batch-case-head{justify-content:start;gap:4px 10px}
+.batch-case-head a{font-weight:650}
+.batch-badge{display:inline-flex;align-items:center;gap:4px;background:#eaf0e8;color:#2d5b4d;border:1px solid #bbcec0;padding:1px 6px;font-size:11px;overflow-wrap:anywhere}
+.batch-badge[data-status="review"],.batch-badge[data-status="waiting"],.batch-badge[data-status="paused"]{background:#f7edda;border-color:#e0caa8;color:#794f24}
+.batch-badge[data-status="failed"],.batch-badge[data-status="stopped"]{background:#f3eae3;border-color:#decbc0;color:#824433}
+.batch-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 10px;margin:0}
+.batch-stats div{min-width:0}
+.batch-stats dt{color:var(--muted);font-size:11px}
+.batch-stats dd{font-size:13px;margin:0;overflow-wrap:anywhere}
+.batch-case .batch-receipt{grid-column:1/-1;color:var(--green);font-size:12px;overflow-wrap:anywhere}
+.batch-case .batch-receipt:empty{display:none}
+.batch-case .batch-proof{grid-column:1/-1;justify-self:start;font-size:12px}
+.batch-case .btn{min-height:37px;padding:5px 10px;justify-self:end}
+.batch-danger{color:var(--red)!important}
+.batch-side{font:13px/1.65 "Cascadia Code",Consolas,monospace}
+@media(max-width:780px){.batch-columns{grid-template-columns:1fr}.batch-controls{border-right:0;border-bottom:1px solid var(--line)}.batch-plan{grid-template-columns:minmax(112px,.7fr) minmax(0,1.3fr)}.batch-case{grid-template-columns:minmax(0,1fr) auto}.batch-case .batch-stats{grid-row:2;grid-column:1/-1}.batch-case .batch-stop{grid-row:1;grid-column:2}}
+@media(max-width:560px){.batch-header,.batch-controls,.batch-plan,.batch-results,.batch-takeover{padding:12px}.batch-feedback{padding:8px 12px}.batch-header h2{font-size:20px}.batch-config{column-gap:11px}.batch-plan{gap:10px}.batch-stats{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.batch-case{column-gap:8px}.batch-takeover{grid-template-columns:1fr}.batch-takeover button{justify-self:start}.batch-takeover textarea{min-height:100px}}
+@media(prefers-reduced-motion:reduce){.batch-floor-new{animation:none}}
+</style>
+</head>
+<body>
+<header><div class="brand"><span class="mark" aria-hidden="true"></span><div><h1>方格子容纳</h1><div class="eyebrow">SQUARE PACKING / 制图台</div></div></div><div class="topnote">单机存档 · 精确几何复核</div></header>
+<main>
+<section class="batch-dashboard" id="batchDashboard" aria-labelledby="batchTitle">
+  <div class="batch-header"><div><h2 id="batchTitle">方格并行搜索</h2><p class="batch-muted">由同一个 Codex 会话安排策略，本地同时搜索不同题目。</p></div><div class="batch-header-actions"><span class="batch-badge" id="batchState">正在连接</span><a href="#problemTitle">单关制图 ↓</a></div></div>
+  <div class="batch-columns">
+    <form class="batch-controls" id="batchForm">
+      <fieldset id="batchChoices" disabled><legend>选择题目</legend><div class="batch-options" id="batchPacks"></div></fieldset>
+      <div class="batch-config">
+        <fieldset id="batchLanes" disabled><legend>同时搜索几关</legend><div class="batch-options"><label><input type="radio" name="batch-parallel" value="1">1 关</label><label><input type="radio" name="batch-parallel" value="2">2 关</label><label><input type="radio" name="batch-parallel" value="3" checked>3 关</label></div></fieldset>
+        <fieldset id="batchRounds" disabled><legend>每关搜索轮数</legend><div class="batch-options"><label><input type="radio" name="batch-rounds" value="1" checked>1 轮</label><label><input type="radio" name="batch-rounds" value="3">3 轮</label><label><input type="radio" name="batch-rounds" value="5">5 轮</label></div></fieldset>
+      </div>
+      <div class="batch-estimate" aria-label="开始前估计"><span>预计搜索 <strong id="batchEstimateTime">校准中</strong></span><span>预计会话用量 <strong id="batchEstimateUsage">校准中</strong></span></div>
+      <button type="submit" class="btn" id="batchStart" disabled>创建搜索批次</button>
+    </form>
+    <div class="batch-plan" aria-labelledby="batchProgressTitle">
+      <div class="batch-tower-frame"><div class="batch-tower-scroll" id="batchTowerScroll"><ol class="batch-tower" id="batchTower" aria-label="经裁判验证的成绩楼层"></ol><div class="batch-foundation" aria-hidden="true"></div></div></div>
+      <div><h3 id="batchProgressTitle">建设进度</h3><div class="batch-progress-number" id="batchFloorCount">0 层</div><p id="batchWork">每出现一项经裁判验证的本批新纪录，就建成一层。</p><p id="batchImproved" class="batch-muted"></p><p id="batchFloorDetail" aria-live="polite" class="batch-muted"></p></div>
+    </div>
+  </div>
+  <div class="batch-feedback" id="batchFeedback"><p class="batch-muted" id="batchMessage" role="status">正在读取本地批次…</p><button type="button" class="btn secondary-btn" id="batchRetry" hidden>重试连接</button><a id="batchLatest" hidden>查看最新批次</a></div>
+  <div class="batch-takeover" id="batchTakeover" hidden>
+    <div><h3>交给当前 Codex 会话</h3><p class="batch-muted">复制接手指令，粘贴到安排这次搜索的同一个会话。</p></div>
+    <button type="button" class="btn secondary-btn" id="batchCopy">复制接手指令</button>
+    <label class="sr-only" for="batchPrompt">批次接手指令</label><textarea id="batchPrompt" spellcheck="false" readonly></textarea>
+  </div>
+  <div class="batch-results" id="batchResults" hidden>
+    <div class="batch-results-head"><h3>批次进展</h3><button type="button" class="btn secondary-btn batch-danger" id="batchStopAll">停止全部</button></div>
+    <p id="batchTiming" class="batch-muted"></p><p id="batchSearchProgress" class="batch-muted"></p><p id="batchUsage" class="batch-usage"></p>
+    <div id="batchRows"></div>
+  </div>
+</section>
+<section class="intro"><div><h2 id="problemTitle">18 块单位方格</h2><p id="introText">每块方格的边长都是 1，可以独立旋转。把它们放进尽可能小的正方形。</p></div><label class="selectbox" for="pack">研究题目 <select id="pack" disabled><option value="square-18">18 块方格</option><option value="square-19">19 块方格</option></select></label></section>
+<div class="overview">
+<section class="scorecard" aria-label="当前已验证成绩" aria-describedby="scoreMethod">
+  <div class="measures">
+    <div class="award"><div class="label">当前称号</div><h3 id="awardName">等待载入</h3><p id="titleHolder" hidden></p><p id="awardReason" hidden></p><details id="titleLevels" hidden><summary>称号条件</summary><ul id="titleRules"></ul></details></div>
+    <div class="measure"><div class="label">包围边长</div><div><span class="number" id="side">—</span><span class="unit">单位</span></div></div>
+    <div class="measure"><div class="label">包围面积</div><div><span class="number" id="area">—</span><span class="unit">平方单位</span></div></div>
+  </div>
+  <div class="secondary"><span>起点面积 <span id="seedArea">—</span></span><span id="improvement" class="good">尚无比较数据</span></div>
+  <p class="score-method" id="scoreMethod">边长向上取整到百万分之一，面积按该边长的平方计算。</p>
+</section>
+<section class="reference" aria-labelledby="referenceTitle">
+  <h3 id="referenceTitle">与公开构造比较</h3>
+  <div class="bounds"><div class="bound"><span class="label">公开下界 · 边长</span><strong id="lower">—</strong></div><div class="bound"><span class="label">公开上界 · 边长</span><strong id="upper">—</strong></div></div>
+  <p id="referenceGap" hidden></p><p id="verifiedSide" hidden></p><p id="referenceNote"></p>
+  <ul class="source-links" aria-label="公开来源">
+    <li id="mathSourceRow" hidden><a id="mathSource" target="_blank" rel="noopener noreferrer">Squaremath · 题目与边界 ↗</a><time id="mathChecked" hidden></time></li>
+    <li id="githubSourceRow" hidden><a id="githubSource" target="_blank" rel="noopener noreferrer">GitHub · 对应布局文件 ↗</a><time id="githubChecked" hidden></time></li>
+  </ul>
+  <p id="sourceState">正在读取本地来源资料…</p>
+  <div class="source-actions"><button type="button" class="btn secondary-btn" id="syncReference" aria-disabled="true">核对来源并更新成绩</button></div>
+  <p id="referenceStatus" role="status" aria-live="polite"></p>
+</section>
+</div>
+<section class="auto-run" id="automatic" aria-labelledby="auto-title" hidden></section>
+<div class="workspace">
+<div class="left">
+<section class="drawing" aria-labelledby="boardTitle"><div class="drawing-head"><span id="boardTitle">当前存档 / 等待载入</span><span class="tag">精确几何验收</span></div><div class="plot"><svg id="drawing" viewBox="0 0 640 560" role="img" aria-labelledby="plotTitle plotDesc"><title id="plotTitle">方格排列</title><desc id="plotDesc">载入后显示每个单位方格以及正方形边界。</desc></svg><div class="plot-empty" id="empty">正在读取本地存档…</div></div><div class="plot-footer"><span class="legend">单位正方形 · 可独立旋转</span><label><input type="checkbox" id="showNumbers" checked> 显示编号</label></div></section>
+</div>
+<div class="right">
+<details class="manual-entry"><summary>手动复制任务和提交方案</summary>
+<section class="panel"><div class="step"><span>01 /</span><h3>交给 AI，一起研究</h3></div><p class="hint">把当前布局和目标交给你正在使用的 AI。每轮尝试都留下方案与可检验的数据。</p><div class="actions"><div class="rounds" role="group" aria-label="任务轮数"><label><input name="rounds" type="radio" value="1" checked>1 轮</label><label><input name="rounds" type="radio" value="3">3 轮</label><label><input name="rounds" type="radio" value="5">5 轮</label></div><button class="btn" id="copyMission" disabled>复制研究任务</button></div><details id="missionDetails"><summary>查看任务全文 / 手动复制</summary><label class="sr-only" for="missionText">研究任务全文</label><textarea id="missionText" readonly spellcheck="false" placeholder="载入后在这里查看研究任务"></textarea><button class="btn secondary-btn" id="selectMission" type="button">选中全文</button></details><p class="check-note">此页面负责交接与验收。AI 推理发生在你选择的会话中。</p></section>
+<section class="panel"><div class="step"><span>02 /</span><h3>提交这次的新排列</h3></div><p class="hint">粘贴 AI 返回的完整 JSON。系统检查每块方格、边界和重叠，再决定是否保存。</p><form id="submitForm"><label class="field" for="author">本次署名</label><input id="author" maxlength="80" autocomplete="off" placeholder="例如：小林 × Codex" required><label class="field" for="candidate">方案 JSON</label><textarea id="candidate" spellcheck="false" required placeholder='{"pack_id":"square-18","parent_hash":"…","solution":{"poses":[…]},"handoff":"…"}'></textarea><div class="submit-row actions"><button type="submit" class="btn" id="submit" disabled>检查并保存</button><button type="button" class="btn secondary-btn" id="reload">刷新存档</button></div></form><div id="status" role="status" aria-live="polite">正在连接本地制图台…</div><details><summary>怎样才算一次真实改进？</summary><p>方格数量、单位边长、彼此不重叠和容器边界都通过检查，且包围正方形比当前纪录更小。最终以本地精确检查结果为准。</p><p>比起点更好是个人进展；只有严格超过公开构造，才可能成为新上界。证明最优还需要匹配的下界证明。</p></details></section>
+</details>
+</div>
+</div>
+<section class="record"><div class="record-head"><h3>已经留下的进展</h3><div class="actions"><a id="download" href="/api/checkpoint?pack=square-18" download>下载存档 JSON ↓</a><a id="report" href="/report?pack=square-18" target="_blank" rel="noopener noreferrer">查看验收报告 ↗</a></div></div><div class="table-wrap"><table><thead><tr><th scope="col">步数</th><th scope="col">署名</th><th scope="col">边长</th><th scope="col">面积</th></tr></thead><tbody id="records"></tbody></table></div><div id="noRecords" class="empty-row">载入后显示保存的纪录。</div></section>
+<footer class="footer"><span>图形用于观察；有效性由精确数据判定。</span><span class="hash" id="hash">存档指纹：—</span></footer>
+</main>
+<script src="/autorun.js"></script>
+<script src="/batch.js" defer></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id),NS="http://www.w3.org/2000/svg";
+let view=null,busy=false,loadingId=0,refreshAfterUnlock=null,selectionVersion=0;
+let selectedPack=new URLSearchParams(location.search).get('pack')||$('pack').value;
+const syncing=new Set();
+const automatic=window.AutoRun?.attach($('automatic'),refreshAutoPack);
+const gameUrl=pack=>'/api/game?pack='+encodeURIComponent(pack);
+
+async function refreshAutoPack(pack){
+  if(pack!==selectedPack||view?.state.pack_id!==pack)return;
+  if(busy||syncing.has(pack)){refreshAfterUnlock=pack;return}
+  const previous=view,version=selectionVersion;
+  try{
+    const data=await api(gameUrl(pack));
+    if(version!==selectionVersion||data.state?.pack_id!==pack)return;
+    if(busy||syncing.has(pack)){refreshAfterUnlock=pack;return}
+    if(previous===view)render(data);
+  }catch{/* The automatic panel will retry on its next poll. */}
+}
+
+function flushRefresh(){
+  if(busy||!refreshAfterUnlock||syncing.has(refreshAfterUnlock))return;
+  const pack=refreshAfterUnlock;
+  refreshAfterUnlock=null;
+  queueMicrotask(()=>refreshAutoPack(pack));
+}
+
+function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error)}
+function locked(value){busy=value;['pack','copyMission','submit'].forEach(id=>$(id).disabled=value||!view);$('reload').disabled=value;automatic?.setReady(!value&&Boolean(view));flushRefresh()}
+async function api(url,options){const response=await fetch(url,{cache:'no-store',...options});let data;try{data=await response.json()}catch{throw new Error('本地服务没有返回有效数据。请确认启动器仍在运行。')}if(!response.ok||data.error)throw new Error(data.error||'请求失败，请稍后重试。');return data}
+function short(value,digits=9){if(value==null)return '—';const n=Number(value);if(!Number.isFinite(n))return String(value);return n.toFixed(digits).replace(/\.?0+$/,'')||'0'}
+function scalar(value){if(value==null)return '—';if(typeof value==='object')return String(value.value??value.side??value.decimal??value.exact??'—');return String(value)}
+function optionalText(id,text){const node=$(id);node.textContent=text||'';node.hidden=!text}
+
+function renderAward(data){
+  const award=data.title_award||{};
+  $('awardName').textContent=award.name||data.achievement||'精确几何验收';
+  optionalText('titleHolder',award.holder?'署名：'+award.holder:'');
+  optionalText('awardReason',award.reason);
+  const levels=data.title_levels||[];
+  $('titleLevels').hidden=!levels.length;
+  $('titleRules').replaceChildren(...levels.map(level=>{
+    const item=document.createElement('li'),name=document.createElement('strong');
+    name.textContent=level.name;
+    item.append(name,level.reason||'');
+    return item;
+  }));
+}
+
+const checkDate=new Intl.DateTimeFormat('zh-CN',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
+function formattedTime(value){const date=value?new Date(value):null;return date&&Number.isFinite(date.getTime())?checkDate.format(date):''}
+function renderSource(source,url,lastChecked){
+  const link=$(source+'Source'),row=$(source+'SourceRow'),time=$(source+'Checked');
+  let address;
+  try{const candidate=new URL(url);if(/^https?:$/.test(candidate.protocol))address=candidate.href}catch{}
+  if(address)link.href=address;
+  else link.removeAttribute('href');
+  row.hidden=!address;
+  const checked=formattedTime(lastChecked);
+  optionalText(time.id,checked?'上次在线核对 '+checked:'');
+  if(checked)time.dateTime=lastChecked;
+  else time.removeAttribute('datetime');
+}
+
+function renderReference(data){
+  const ref=data.reference||{},gap=ref.gap_ticks;
+  $('lower').textContent=scalar(ref.lower);
+  $('upper').textContent=scalar(ref.upper);
+  if(Number.isSafeInteger(gap)){
+    const distance=short(Math.abs(gap)/1000000,6);
+    const comparison=gap>0?'本地边长还需缩短 '+distance+' 单位':gap<0?'本地边长比公开上界短 '+distance+' 单位':'本地边长已达到公开上界的计分精度';
+    optionalText('referenceGap',comparison);
+  }else optionalText('referenceGap','公开边长的精度或数值待核对，暂无法计算差距。');
+  optionalText('verifiedSide',ref.verified_side!=null?'公开布局经本地复算的计分边长为 '+scalar(ref.verified_side)+' 单位。':'');
+  $('referenceNote').textContent=ref.note||'公开上下界之间的差距仍待研究。';
+  renderSource('math',ref.math_url||ref.lower_url||'https://squaremath.org/cases/'+data.state.n+'.html',ref.math_checked_at);
+  renderSource('github',ref.github_url,ref.github_checked_at);
+  const states={online:'两处来源均已在线核对',partial:'部分来源在线核对成功',cached:'显示上次保存的来源核对结果',bundled:'尚未在线核对成功 · 使用内置来源快照'};
+  const attempt=formattedTime(ref.checked_at);
+  $('sourceState').textContent=(states[ref.source_status]||states.bundled)+(attempt?' · 上次核对尝试 '+attempt:'');
+}
+
+function referenceMessage(text,error=false){
+  const status=$('referenceStatus');
+  status.textContent=text;
+  status.classList.toggle('error',error);
+}
+function updateSyncControl(){
+  $('syncReference').setAttribute('aria-disabled',String(view?.state.pack_id!==selectedPack||syncing.has(selectedPack)));
+}
+
+$('syncReference').addEventListener('click',async()=>{
+  const pack=selectedPack;
+  if(view?.state.pack_id!==pack||syncing.has(pack))return;
+  const version=selectionVersion,beforeHash=view.state.hash;
+  syncing.add(pack);
+  updateSyncControl();
+  referenceMessage('正在核对 Squaremath 和 GitHub…');
+  try{
+    const data=await api('/api/reference/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pack_id:pack})});
+    if(version!==selectionVersion)return;
+    if(data.state?.pack_id!==pack)throw new Error('本地服务返回的核对结果与当前题目不一致。');
+    if(view.state.hash===beforeHash||view.state.hash===data.state.hash)render(data);
+    else refreshAfterUnlock=pack;
+    const failed=['cached','bundled'].includes(data.sync_status);
+    referenceMessage(data.message||(failed?'在线核对未成功，当前显示最近可用的成绩。':'来源核对已完成。'),failed);
+  }catch(error){
+    if(version===selectionVersion){
+      referenceMessage(error instanceof TypeError?'无法连接本地制图台，来源核对没有返回结果。':error.message,true);
+    }
+  }
+  finally{
+    syncing.delete(pack);
+    if(version!==selectionVersion&&selectedPack===pack){
+      referenceMessage('');
+      refreshAfterUnlock=pack;
+    }
+    updateSyncControl();
+    flushRefresh();
+  }
+});
+function svgNode(name,attributes,parent=$('drawing')){const node=document.createElementNS(NS,name);for(const[key,value]of Object.entries(attributes||{}))node.setAttribute(key,String(value));parent.append(node);return node}
+function svgText(text,x,y,attributes={}){const n=svgNode('text',{x,y,fill:'#58696b','font-family':'Consolas,monospace','font-size':12,...attributes});n.textContent=text;return n}
+function draw(){if(!view)return;const svg=$('drawing');svg.replaceChildren();const title=svgNode('title',{id:'plotTitle'});title.textContent=view.state.n+' 个单位正方形的当前排列';const desc=svgNode('desc',{id:'plotDesc'});desc.textContent='边长 '+view.state.side+'，面积 '+view.state.area+'。编号对应方案中的方格顺序。';const side=Number(view.state.side),polygons=view.polygons||[];if(!(side>0)||!polygons.length){$('empty').hidden=false;$('empty').textContent='暂无可绘制的布局。';return}$('empty').hidden=true;const originX=87,originY=500,size=444,scale=size/side;const xy=p=>[originX+Number(p[0])*scale,originY-Number(p[1])*scale];svgNode('rect',{x:originX,y:originY-size,width:size,height:size,fill:'#fffefa',stroke:'#253b3e','stroke-width':1.8});for(let t=0;t<=Math.floor(side);t++){const x=originX+t*scale,y=originY-t*scale;svgNode('path',{d:'M'+x+' '+(originY+3)+'v5 M'+(originX-8)+' '+y+'h5',stroke:'#58696b','stroke-width':1});svgText(String(t),x,originY+22,{'text-anchor':'middle'});if(t>0)svgText(String(t),originX-16,y+4,{'text-anchor':'end'})}polygons.forEach((poly,index)=>{const points=Array.isArray(poly)?poly:(poly.vertices||poly.points||[]);if(!points.length)return;const mapped=points.map(xy);if(mapped.some(p=>!p.every(Number.isFinite)))return;const p=svgNode('polygon',{points:mapped.map(p=>p.join(',')).join(' '),fill:index%3===0?'#d5e3d8':index%3===1?'#e7e9d5':'#e1ece7',stroke:'#37665d','stroke-width':1.25,tabindex:0});const hint=svgNode('title',{},p);hint.textContent='方格 '+(index+1)+' · 边长 1';if($('showNumbers').checked){const center=mapped.reduce((a,p)=>[a[0]+p[0]/mapped.length,a[1]+p[1]/mapped.length],[0,0]);svgText(String(index+1),center[0],center[1]+4,{'text-anchor':'middle',fill:'#37665d','font-size':12,'pointer-events':'none'})}});svgNode('path',{d:'M'+originX+' 33H'+(originX+size)+' M'+originX+' 28V38 M'+(originX+size)+' 28V38',stroke:'#af522c','stroke-width':1});svgText('S = '+short(view.state.side),originX+size/2,23,{'text-anchor':'middle',fill:'#af522c','font-size':13});svgText('x',originX+size+20,originY+4);svgText('y',originX-16,originY-size-7,{'text-anchor':'end'})}
+function render(data){
+  const state=data.state;
+  if(!state)throw new Error('存档数据缺少布局状态。');
+  const newLayout=view?.state.pack_id!==state.pack_id||view?.state.hash!==state.hash;
+  view=data;
+  renderAward(data);
+  renderReference(data);
+  updateSyncControl();
+  if(newLayout){
+    $('problemTitle').textContent=state.n+' 块单位方格';
+    $('candidate').placeholder=JSON.stringify({pack_id:state.pack_id,parent_hash:'…',solution:{poses:['…']},handoff:'…'});
+    const packs=data.packs?.length?data.packs:[{id:state.pack_id,n:state.n}];
+    const options=$('pack').options;
+    if(options.length!==packs.length||packs.some((pack,index)=>options[index].value!==pack.id||options[index].disabled!==(pack.open===false))){
+      $('pack').replaceChildren(...packs.map(pack=>{
+        const option=new Option(pack.n+' 块方格',pack.id);
+        option.disabled=pack.open===false;
+        return option;
+      }));
+    }
+    $('pack').value=state.pack_id;
+    $('boardTitle').textContent=state.n+' 块方格 / 当前存档';
+    $('introText').textContent=state.n+' 块方格，每块边长都是 1，可以独立旋转。寻找更小的包围正方形。';
+    $('side').textContent=scalar(state.side);
+    $('area').textContent=scalar(state.area);
+    $('seedArea').textContent=scalar(state.seed_area);
+    const gain=Number(state.seed_area)-Number(state.area);
+    $('improvement').textContent=Number.isFinite(gain)&&gain>0?'比起点省下约 '+short(gain,6)+' 平方单位':'当前布局为比较起点';
+    const mission=$('missionText');
+    if(document.activeElement===mission){
+      const {selectionStart:start,selectionEnd:end,selectionDirection:direction}=mission;
+      mission.value=data.prompt||'';
+      mission.setSelectionRange(start,end,direction);
+    }else mission.value=data.prompt||'';
+    $('hash').textContent='存档指纹：'+state.hash;
+    const encoded=encodeURIComponent(state.pack_id);
+    $('download').href='/api/checkpoint?pack='+encoded;
+    $('report').href='/report?pack='+encoded;
+    const records=data.lineage||[];
+    $('records').replaceChildren(...records.map((record,index)=>{
+      const row=document.createElement('tr');
+      [String(index),record.author||'初始布局',scalar(record.side),scalar(record.area)].forEach(value=>{
+        row.insertCell().textContent=value;
+      });
+      return row;
+    }));
+    $('noRecords').hidden=records.length>0;
+    $('noRecords').textContent='尚未产生新的保存纪录。';
+    draw();
+  }
+  automatic?.setPack(state.pack_id,true,data.prompt,state.hash);
+  if(busy)automatic?.setReady(false);
+}
+
+async function load(pack){
+  const id=++loadingId,previous=view;
+  locked(true);
+  message('正在读取本地存档…');
+  try{
+    const data=await api(gameUrl(pack));
+    if(id!==loadingId)return;
+    if(data.state?.pack_id!==pack)throw new Error('本地服务返回的存档与当前题目不一致。');
+    if(previous===view||view?.state.pack_id!==pack)render(data);
+    else refreshAfterUnlock=pack;
+    const url=new URL(location.href);
+    if(url.searchParams.has('pack')||pack!=='square-18'){
+      url.searchParams.set('pack',pack);
+      history.replaceState(null,'',url.pathname+url.search+url.hash);
+    }
+    message('已载入当前布局。');
+  }catch(error){
+    if(id!==loadingId)return;
+    message(error.message,true);
+    if(!view){$('empty').hidden=false;$('empty').textContent='无法连接本地服务。请启动游戏后刷新。'}
+    else selectedPack=$('pack').value=view.state.pack_id;
+  }finally{
+    if(id===loadingId){locked(false);updateSyncControl()}
+  }
+}
+
+$('pack').addEventListener('change',()=>{
+  selectedPack=$('pack').value;
+  selectionVersion++;
+  referenceMessage(syncing.has(selectedPack)?'正在核对 Squaremath 和 GitHub…':'');
+  updateSyncControl();
+  load(selectedPack);
+});
+$('reload').addEventListener('click',()=>load(selectedPack));$('showNumbers').addEventListener('change',draw);$('selectMission').addEventListener('click',()=>{$('missionText').focus();$('missionText').select();message('已选中任务全文，请按 Ctrl+C 或使用系统复制菜单。')});
+$('copyMission').addEventListener('click',async()=>{if(!view||busy)return;locked(true);message('正在准备研究任务…');try{const rounds=Number(document.querySelector('input[name="rounds"]:checked').value);let prompt=view.prompt||'';if(rounds>1)prompt=(await api('/api/mission?pack='+encodeURIComponent(view.state.pack_id)+'&rounds='+rounds)).prompt;if(!prompt)throw new Error('任务内容为空，请刷新存档后重试。');$('missionText').value=prompt;try{await navigator.clipboard.writeText(prompt);message('已复制 '+rounds+' 轮研究任务，粘贴到你的 AI 会话即可。')}catch{$('missionDetails').open=true;$('missionText').focus();$('missionText').select();message('浏览器未允许自动复制，已选中任务全文。请按 Ctrl+C 或使用系统复制菜单。')}}catch(error){message(error.message,true)}finally{locked(false)}});
+$('submitForm').addEventListener('submit',async(event)=>{event.preventDefault();if(!view||busy)return;const author=$('author').value.trim();if(!author){message('请填写本次署名。',true);$('author').focus();return}let candidate;try{let raw=$('candidate').value.trim();if(raw.startsWith('```'))raw=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');let parsed=JSON.parse(raw);candidate=parsed.candidate||parsed;if(!candidate||typeof candidate!=='object'||Array.isArray(candidate))throw new Error('请粘贴一个 JSON 对象。');if(!candidate.solution||!Array.isArray(candidate.solution.poses))throw new Error('方案需包含 solution.poses 方格数据。');if(!candidate.pack_id||!candidate.parent_hash)throw new Error('方案缺少 pack_id 或 parent_hash，请让 AI 保留任务中的题目和存档指纹。');if(candidate.pack_id!==view.state.pack_id)throw new Error('这份方案属于其他题目，请切换到对应题目再提交。')}catch(error){message(error instanceof SyntaxError?'JSON 格式无法读取。请粘贴 AI 返回的完整 JSON，不要附带解释文字。':error.message,true);return}locked(true);message('正在精确检查方格、重叠和包围边界…');try{const data=await api('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({author,candidate})});render(data);$('candidate').value='';message(data.message||'检查完成，存档已更新。')}catch(error){message(error.message,true)}finally{locked(false)}});
+load(selectedPack);
+</script>
+</body>
+</html>

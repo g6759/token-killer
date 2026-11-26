@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>token-killer · 解题实验室</title>
+  <link rel="stylesheet" href="/lab.css">
+  <script defer src="/console.js"></script>
+  <script defer src="/lab.js"></script>
+</head>
+<body>
+  <main>
+    <header class="page-head">
+      <div><h1 lang="en">token-killer</h1><p>解题实验室 · 本地对局与模型吞吐对照</p></div>
+      <div class="header-links">
+        <span class="connection" id="connection">正在连接本机</span>
+        <div class="language-switch" role="group" aria-label="Language / 语言"><button id="lang-zh" type="button" aria-pressed="true">中文</button><button id="lang-en" type="button" aria-pressed="false">English</button></div>
+        <a href="/scores">项目成绩 ↗</a>
+      </div>
+    </header>
+
+    <section class="run-console" id="run-console" aria-labelledby="console-title">
+      <div data-native>
+        <div class="console-heading">
+          <h2 id="console-title">运行控制台</h2>
+          <span id="console-state" role="status"></span>
+        </div>
+        <div class="console-body">
+          <div class="console-control">
+            <div class="console-choices">
+              <label><span id="scenario-label">玩法</span><select id="run-scenario"></select></label>
+              <label><span id="duration-label">运行时长</span><select id="run-duration"></select></label>
+            </div>
+            <p id="run-description"></p>
+            <div class="console-actions">
+              <button type="button" id="run-start" disabled>开始运行</button>
+              <button type="button" id="run-stop" class="stop-run" hidden>停止运行</button>
+              <a href="#plan" id="manage-plan">管理订阅</a>
+            </div>
+            <p id="run-notice" role="status" aria-live="polite"></p>
+          </div>
+          <div class="console-quota">
+            <div class="quota-heading"><h3 id="allowance-title">套餐余量</h3><button type="button" class="text-button" id="refresh-allowance">刷新</button></div>
+            <div id="allowance-windows"></div><p id="allowance-detail"></p>
+          </div>
+        </div>
+        <dl class="console-totals">
+          <div><dt id="speed-label">有效 token / 分钟</dt><dd id="console-speed">—</dd></div>
+          <div><dt id="total-label">本场累计有效 token</dt><dd id="console-total">—</dd></div>
+          <div><dt id="time-label">当前窗口剩余</dt><dd id="console-time">—</dd></div>
+        </dl>
+        <p class="console-foot" id="receipt-note"></p>
+      </div>
+      <div id="setup-slot"></div>
+    </section>
+
+    <section aria-labelledby="games-title">
+      <h2 id="games-title">对局</h2>
+      <div class="games">
+        <article class="game square">
+          <div class="game-copy">
+            <h3>方格子容纳</h3>
+            <p>压缩 26 个单位正方形的外框。</p>
+            <div class="score" id="packing-score">—</div>
+            <p class="caption">本地最佳边长 <span id="packing-job"></span></p>
+            <a class="game-link" id="packing-link">进入方格冲榜 <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="piece-board" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </article>
+        <article class="game relay">
+          <div class="game-copy">
+            <h3>四境驿站</h3>
+            <p>改进 26 份名单，覆盖 49 站之间的站点对。</p>
+            <div class="score" id="relay-score">—</div>
+            <p class="caption">已覆盖站点对 <span id="relay-job"></span></p>
+            <a class="game-link" id="relay-link">进入四境驿站 <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="station-board" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </article>
+      </div>
+      <p id="packing-cases" class="packing-cases" hidden></p>
+      <nav class="research-games" aria-label="研究游戏">
+        <a id="cap-link" href="/research?game=cap-set"><strong>Cap Set</strong><span>在三元向量中选点，使任意三点不共线。</span></a>
+        <a id="ruler-link" href="/research?game=golomb-ruler"><strong>Golomb 尺</strong><span>移动刻度，用更短的尺量出不同距离。</span></a>
+        <a id="lorenz-link" href="/research?game=lorenz-divergence"><strong>超维递归模拟器</strong><span>调整 Lorenz 初值，观察两条轨迹何时分开。</span></a>
+      </nav>
+    </section>
+
+    <section class="comparison" aria-labelledby="compare-title">
+      <div class="compare-head">
+        <div>
+          <h2 id="compare-title">模型吞吐对照</h2>
+          <p id="benchmark-status" role="status">等待实跑数据</p>
+        </div>
+        <div class="actions">
+          <button id="mixed-start" type="button" disabled>混合双路冲榜</button>
+          <button id="continuous-start" class="secondary" type="button" disabled>连续冲榜</button>
+          <button id="live" class="secondary" type="button" disabled>开始三组对照</button>
+          <select id="concurrency-choice" class="comparison-choice" aria-label="选择并发对照路数">
+            <option value="concurrency">双路与四路</option>
+            <option value="square-relay-frontier-comparison">方格与接力 · 各 40 路、各 10 分钟</option>
+            <option value="high-concurrency">四路与八路</option>
+            <option value="sixteen-lane-comparison">八路与十六路</option>
+            <option value="portfolio-comparison">单题方格与多题组合</option>
+            <option value="portfolio-scale-comparison">多题十六路与二十四路</option>
+            <option value="relay-mix-comparison">多题十六路与全接力</option>
+            <option value="relay-scale-comparison">全接力二十四路与十六路</option>
+            <option value="relay-twenty-lane-comparison">全接力二十路与十六路</option>
+            <option value="relay-twenty-two-lane-comparison">全接力二十二路与二十路</option>
+            <option value="relay-twenty-three-lane-comparison">全接力二十三路与二十二路</option>
+            <option value="relay-target-comparison" selected>二十二路单目标与双目标</option>
+          </select>
+          <button id="concurrency-start" class="secondary" type="button" disabled>开始并发对照</button>
+          <button id="resume" class="secondary" type="button" hidden>继续实跑</button>
+          <button id="replay" class="secondary" type="button">离线演练</button>
+          <button id="stop" class="secondary" type="button" hidden>停止</button>
+        </div>
+      </div>
+      <p id="featured-estimate" class="featured-estimate" hidden></p>
+      <p class="native-note">裁判回执、模型输出与任务日志保留原文。</p>
+      <details class="plan">
+        <summary>参加玩法挑战</summary>
+        <p>速度挑战按一个完整十分钟窗口比较有效 token/分钟。总量挑战累加互不重叠的完整窗口，记录总有效 token、实际用时和通过裁判的不同候选。</p>
+        <p><a href="https://github.com/g6759/token-killer/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">复算和投稿说明</a> · <a href="https://github.com/g6759/token-killer/issues/new?template=throughput-method.yml" target="_blank" rel="noopener noreferrer">向 GitHub 提交玩法或成绩</a></p>
+      </details>
+      <p id="continuous-progress" class="mixed-result" hidden></p>
+      <div id="progress" class="progress" hidden aria-live="polite" data-native></div>
+      <p id="mixed-result" class="mixed-result" hidden></p>
+      <div id="trial-layouts" class="trial-layouts" hidden aria-label="最近通过几何裁判的试摆"></div>
+      <div id="tower" class="tower" hidden>
+        <strong id="tower-label"></strong>
+        <div id="tower-floors" aria-hidden="true"></div>
+      </div>
+      <div class="table-wrap" tabindex="0" aria-label="对照结果，可横向滚动">
+        <table>
+          <thead><tr><th scope="col">跑法</th><th scope="col">有效 token / 分钟</th><th scope="col">有效 token 总量</th><th scope="col">原始总 token</th><th scope="col">输出 / 分钟</th><th scope="col">缓存输入</th><th scope="col">去重有效候选</th><th scope="col">模型回合</th></tr></thead>
+          <tbody id="benchmark-rows">
+            <tr id="single"><th scope="row">26 块单局</th><td data-label="有效 token / 分钟">—</td><td data-label="有效 token 总量">—</td><td data-label="原始总 token">—</td><td data-label="输出 / 分钟">—</td><td data-label="缓存输入">—</td><td data-label="去重有效候选">—</td><td data-label="模型回合">—</td></tr>
+            <tr id="same-game"><th scope="row">26 块双局</th><td data-label="有效 token / 分钟">—</td><td data-label="有效 token 总量">—</td><td data-label="原始总 token">—</td><td data-label="输出 / 分钟">—</td><td data-label="缓存输入">—</td><td data-label="去重有效候选">—</td><td data-label="模型回合">—</td></tr>
+            <tr id="mixed"><th scope="row">方格＋接力双路</th><td data-label="有效 token / 分钟">—</td><td data-label="有效 token 总量">—</td><td data-label="原始总 token">—</td><td data-label="输出 / 分钟">—</td><td data-label="缓存输入">—</td><td data-label="去重有效候选">—</td><td data-label="模型回合">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <section id="concurrency-results" class="concurrency-results" aria-labelledby="concurrency-title" hidden>
+        <h3 id="concurrency-title">并发对照结果</h3>
+        <p id="concurrency-status"></p>
+        <p id="portfolio-candidates" hidden></p>
+        <div class="table-wrap" tabindex="0" aria-label="混合并发度结果，可横向滚动">
+          <table>
+            <thead><tr><th scope="col">跑法</th><th scope="col">有效 token / 分钟</th><th scope="col">有效 token 总量</th><th scope="col">原始总 token</th><th scope="col">输出 / 分钟</th><th scope="col">缓存输入</th><th scope="col">去重有效候选</th><th scope="col">模型回合</th></tr></thead>
+            <tbody id="concurrency-rows">
+              <tr data-scenario="mixed"><th scope="row">方格＋接力双路</th><td data-label="有效 token / 分钟">—</td><td data-label="有效 token 总量">—</td><td data-label="原始总 token">—</td><td data-label="输出 / 分钟">—</td><td data-label="缓存输入">—</td><td data-label="去重有效候选">—</td><td data-label="模型回合">—</td></tr>
+              <tr data-scenario="mixed-four"><th scope="row">方格＋接力四路</th><td data-label="有效 token / 分钟">—</td><td data-label="有效 token 总量">—</td><td data-label="原始总 token">—</td><td data-label="输出 / 分钟">—</td><td data-label="缓存输入">—</td><td data-label="去重有效候选">—</td><td data-label="模型回合">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <details class="plan" id="plan">
+        <summary id="plan-title">连接 ChatGPT 订阅</summary>
+        <p id="plan-status">正在检查本机连接</p>
+        <div class="actions">
+          <button id="connect" class="secondary" type="button">连接账号</button>
+          <a id="authorize" target="_blank" rel="noopener" hidden>在官方页面授权 ↗</a>
+          <a id="usage-settings" href="https://chatgpt.com/#settings/Usage" target="_blank" rel="noopener">官方用量设置 ↗</a>
+        </div>
+        <form id="limit">
+          <label for="percent">已保存的应用周上限</label>
+          <input id="percent" type="number" min="1" max="99.99" step="any" required aria-label="应用周上限，百分比">
+          <span aria-hidden="true">%</span>
+          <button class="secondary" type="submit">确认</button>
+        </form>
+      </details>
+    </section>
+  </main>
+</body>
+</html>

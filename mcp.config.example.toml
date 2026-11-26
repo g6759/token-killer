@@ -1,0 +1,8 @@
+# Open the project as your MCP client's working directory, with the optional
+# dependencies installed in this interpreter. For clients started elsewhere,
+# use the absolute paths to the interpreter and the server script.
+# Windows TOML path example: 'C:\games\token-killer\.venv\Scripts\python.exe'
+# macOS/Linux example: '/path/to/token-killer/.venv/bin/python'
+[mcp_servers.research_games]
+command = "python"
+args = ["-B", "-X", "utf8", "游戏MCP/server.py", "--transport", "stdio"]

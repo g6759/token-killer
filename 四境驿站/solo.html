@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>四镜驿站</title>
+<style>
+  :root {
+    color-scheme: light;
+    --paper:#f3efe4; --panel:#fffcf5; --ink:#202d25; --muted:#526157; --forest:#153f35;
+    --pine:#256753; --line:#dbd8cb; --rust:#92402a; --sand:#f5e1cf; --mint:#c1dfcf;
+    --serif:"Songti SC","Noto Serif CJK SC",SimSun,serif;
+    --sans:system-ui,"Microsoft YaHei",sans-serif;
+    font:15px/1.55 var(--sans);
+  }
+  *,*::before,*::after { box-sizing:border-box }
+  body { margin:0; color:var(--ink); background:var(--paper) }
+  [hidden] { display:none !important }
+  button,input,select,textarea { font:inherit }
+  button,select,summary { cursor:pointer }
+  a { color:inherit }
+  button:disabled,select:disabled,input:disabled { cursor:not-allowed; opacity:.53 }
+  :focus-visible { outline:3px solid #bf6834; outline-offset:3px }
+  .wrap { width:min(1160px,calc(100% - 48px)); margin-inline:auto }
+  .top { border-bottom:1px solid #d9d4c5; background:var(--panel) }
+  .top .wrap { min-height:62px; display:flex; justify-content:space-between; align-items:center; gap:12px }
+  .top-actions { display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap }
+  .language-switch { display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden }
+  .language-switch button { width:auto;min-height:32px;padding:4px 9px;border:0;background:var(--panel);color:var(--forest);font-size:.78rem }
+  .language-switch button+button { border-left:1px solid var(--line) }
+  .language-switch button[aria-pressed=true] { background:var(--forest);color:#fff }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:750; letter-spacing:.12em; color:var(--forest) }
+  .mark { display:inline-grid; grid-template-columns:repeat(2,6px); gap:2px; padding:6px; background:var(--forest); border-radius:5px; transform:rotate(-12deg) }
+  .mark i { width:6px; height:6px; background:#d5e5cf; border-radius:1px }
+  .mark i:nth-child(2) { background:#e2ac83 }
+  .local { color:var(--muted); font-size:.84rem; letter-spacing:.05em }
+  main.wrap { padding-block:26px 42px }
+  .hero { display:grid; grid-template-columns:minmax(0,1fr) minmax(210px,30%); background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:22px }
+  .hero-main { padding:27px 32px }
+  h1 { font:800 clamp(2rem,4.8vw,3.5rem)/1.12 var(--serif); letter-spacing:.045em; color:var(--forest); margin:0 0 8px }
+  .hero p { margin:0; color:var(--muted) }
+  .hero .goal { font-size:.97rem }
+  .hero .benchmark { margin-top:7px; font-size:.84rem }
+  .benchmark a { text-underline-offset:3px }
+  html[lang="en"] .benchmark a { margin-left:.3em }
+  .score-panel { background:var(--forest); color:#fffcf2; padding:22px 27px; display:flex; flex-direction:column; justify-content:center; position:relative }
+  .score-panel::after { content:""; position:absolute; top:0; right:0; width:88px; height:100%; pointer-events:none; opacity:.09; background:repeating-linear-gradient(138deg,transparent 0 13px,#c1dcc9 14px 15px,transparent 16px 23px) }
+  .score-label { color:#d9e8dd; font-size:.85rem; font-weight:650 }
+  .score-line { display:flex; align-items:baseline; gap:8px; font-variant-numeric:tabular-nums }
+  .score-line strong { font-size:clamp(2.6rem,5.5vw,4.25rem); line-height:1.06; letter-spacing:-.06em }
+  .score-line span { color:#d9e8dd; font-size:clamp(.9rem,1.6vw,1.08rem) }
+  progress { width:100%; margin:13px 0 5px; height:7px; appearance:none; border:0; background:#3e695d; border-radius:8px; overflow:hidden }
+  progress::-webkit-progress-bar { background:#3e695d }
+  progress::-webkit-progress-value { background:#bfdcaa }
+  progress::-moz-progress-bar { background:#bfdcaa }
+  .score-panel p { color:#e2eee3; font-size:.87rem; margin-top:3px }
+  .layout { display:grid; grid-template-columns:minmax(0,1.48fr) minmax(320px,1fr); gap:18px; align-items:start }
+  .panel { min-width:0; border:1px solid var(--line); border-radius:10px; background:var(--panel) }
+  .panel-head { display:flex; justify-content:space-between; gap:14px; align-items:baseline; padding:19px 22px 13px; border-bottom:1px solid var(--line) }
+  h2 { font:750 1.4rem/1.22 var(--serif); margin:0; color:var(--forest); letter-spacing:.035em }
+  .subtle { color:var(--muted); font-size:.84rem }
+  .board-body,.desk-body { padding:16px 22px 20px }
+  .legend { display:flex; flex-wrap:wrap; column-gap:14px; row-gap:6px; color:var(--muted); font-size:.81rem; margin-bottom:8px }
+  .legend span { display:inline-flex; align-items:center; gap:5px }
+  .key { width:10px; height:10px; border-radius:2px; border:1px solid #0002; display:inline-block }
+  .key.covered { background:#91bca6 }
+  .key.missed { background:#e7bda6 }
+  .key.gained { background:#0c6351 }
+  .key.lost { background:#943d27 }
+  .matrix { display:block; width:100%; max-width:540px; height:auto; margin-inline:auto; cursor:crosshair; touch-action:manipulation }
+  .pair-info { background:#eeeee3; border-left:3px solid #688a75; padding:8px 11px; margin:4px 0 12px; min-height:39px; font-size:.86rem }
+  .missing { border-top:1px solid var(--line); padding-top:12px }
+  .missing h3,.change h3 { margin:0 0 5px; font-size:.92rem }
+  .chips { display:flex; flex-wrap:wrap; gap:5px; max-height:160px; overflow:auto; padding:2px }
+  .chip { color:#753925; background:#f8e9dd; border:1px solid #eac9b5; border-radius:4px; padding:2px 8px; font-size:.8rem; font-variant-numeric:tabular-nums }
+  .chip:hover,.chip[aria-pressed="true"] { background:#edcfbc }
+  .text-button { padding:0; background:none; border:none; color:var(--forest); text-decoration:underline; text-underline-offset:3px; font-size:.82rem; margin-top:8px; font-weight:650 }
+  .desk-body > p:first-child { margin-top:0 }
+  .desk-body form { display:grid; gap:10px }
+  .field { display:grid; gap:4px; min-width:0; font-weight:650; font-size:.84rem }
+  input,select,textarea { width:100%; min-width:0; border:1px solid #c8cbbf; border-radius:5px; background:#fffef9; color:var(--ink); padding:8px 9px; font-weight:400; font-size:.9rem }
+  input,select { min-height:40px }
+  textarea { resize:vertical }
+  .two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px }
+  .button { min-height:40px; border:1px solid var(--forest); padding:8px 13px; border-radius:5px; background:var(--forest); color:#fffdf2; font-weight:680; text-decoration:none; text-align:center }
+  .button:hover:not(:disabled) { background:#286456 }
+  .button.secondary { background:transparent; color:var(--forest); border-color:#9aac9e }
+  .button.secondary:hover:not(:disabled) { background:#e6eee4 }
+  .preview { min-height:36px; color:var(--muted); margin:0; font-size:.85rem }
+  .status { padding:9px 11px; margin-bottom:11px; background:#e5efe3; border-radius:4px; font-size:.87rem; overflow-wrap:anywhere; color:#244c36 }
+  .status.error { background:#f7e4dc; color:#742f27 }
+  .change { border-top:1px solid var(--line); margin-top:14px; padding-top:10px }
+  .change p { margin:4px 0; overflow-wrap:anywhere }
+  .changed-gain { color:#0b5948 }
+  .changed-loss { color:#843822 }
+  .finished { margin:0; color:var(--forest); font-weight:700; padding:10px; background:#e5efe3; border-radius:4px }
+  .desk-body details { border-top:1px solid var(--line); padding:12px 0 0; margin-top:15px }
+  .desk-body .manual-entry { border:0; padding:0; margin:0 }
+  .manual-entry > summary { margin-bottom:8px }
+  summary { color:var(--forest); font-size:.9rem; font-weight:700 }
+  .ai-intro { margin:8px 0; font-size:.84rem; color:var(--muted) }
+  .ai-copy { display:flex; flex-wrap:wrap; align-items:center; gap:7px 10px }
+  .ai-copy .field { grid-template-columns:auto 4.3rem; align-items:center; gap:7px }
+  .ai-copy [role="status"] { flex-basis:100% }
+  .manual-controls { padding-top:9px }
+  .desk-body details.text-view { border:0; padding:0; margin:8px 0 11px }
+  .text-view textarea { margin-top:5px }
+  .report .desk-body { padding-top:12px }
+  .report { margin-top:14px }
+  .report-actions { display:flex; flex-wrap:wrap; gap:8px }
+  .report-actions .button { font-size:.84rem; min-height:35px }
+  .neighborhood { border-top:1px solid var(--line); margin-top:14px; padding-top:12px }
+  .neighborhood p { margin:6px 0; font-size:.84rem; color:var(--muted) }
+  .neighborhood .audit-error { color:var(--rust) }
+  .trail { list-style:none; padding:0; margin:0 0 12px; max-height:180px; overflow:auto }
+  .trail li { display:grid; grid-template-columns:minmax(0,1fr) auto; padding:5px 1px; gap:9px; border-bottom:1px solid #eae5d9; overflow-wrap:anywhere; font-size:.85rem }
+  .trail li strong { color:var(--forest); font-variant-numeric:tabular-nums }
+  .notes { white-space:pre-wrap; overflow-wrap:anywhere; font-size:.84rem; color:var(--muted) }
+  .boot { margin:0 0 12px }
+  @media (max-width:820px) {
+    .wrap { width:min(690px,calc(100% - 28px)) }
+    .layout { grid-template-columns:minmax(0,1fr) }
+    .hero-main { padding:21px }
+    .score-panel { padding:18px 19px }
+  }
+  @media (max-width:490px) {
+    main.wrap { padding-top:14px }
+    .hero { grid-template-columns:minmax(0,1fr); margin-bottom:13px }
+    .score-panel { padding:10px 16px 11px }
+    .score-line strong { font-size:2rem }
+    .score-panel progress { margin:6px 0 2px }
+    .hero-main,.panel-head,.board-body,.desk-body { padding-inline:13px }
+    .hero-main { padding-block:14px }
+    .layout { gap:12px }
+    .top .wrap { min-height:47px }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <span class="brand"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>四镜驿站</span>
+    <div class="top-actions"><span class="local">单人 · 本机存档</span><div class="language-switch" role="group" aria-label="Language / 语言"><button id="lang-zh" type="button" aria-pressed="true">中文</button><button id="lang-en" type="button" aria-pressed="false">English</button></div></div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero" aria-labelledby="title">
+    <div class="hero-main">
+      <h1 id="title">四十九站全覆盖</h1>
+      <p class="goal">用 26 份名单覆盖全部 1,176 对，每份 11 站。两站同组即通联。</p>
+      <p class="benchmark">已核对的公开构造用 27 份。起点删去其中一份，留下 16 个缺口。<a href="https://www.coveringrepository.com/systems.aspx?k=11" target="_blank" rel="noopener noreferrer">公开基线</a></p>
+    </div>
+    <div class="score-panel">
+      <span class="score-label">本机最好覆盖</span>
+      <div class="score-line"><strong id="score">—</strong><span id="total"></span></div>
+      <progress id="progress" aria-label="覆盖进度" max="1" value="0"></progress>
+      <p id="achievement">正在打开存档</p>
+    </div>
+  </section>
+  <p id="boot" class="status boot" role="status">正在打开本机存档…</p>
+  <button class="button secondary" type="button" id="retry" hidden>重新读取存档</button>
+  <section class="auto-run" id="automatic" aria-labelledby="auto-title" hidden></section>
+  <div id="play" class="layout" hidden>
+    <section class="panel" aria-labelledby="board-title">
+      <div class="panel-head">
+        <h2 id="board-title">站对通联图</h2>
+        <span id="map-size" class="subtle"></span>
+      </div>
+      <div class="board-body">
+        <div class="legend" aria-label="图例">
+          <span><i class="key covered"></i>已通联</span>
+          <span><i class="key missed"></i>待通联</span>
+          <span id="legend-gained" hidden><i class="key gained"></i>本轮新增</span>
+          <span id="legend-lost" hidden><i class="key lost"></i>本轮遗失</span>
+        </div>
+        <canvas id="matrix" class="matrix" width="560" height="560" role="img" aria-label="站对覆盖矩阵"></canvas>
+        <p id="pair-info" class="pair-info">点一个站对查看通联情况。</p>
+        <div class="missing">
+          <h3 id="missing-title">遗留站对</h3>
+          <div id="missing" class="chips" aria-labelledby="missing-title"></div>
+          <button type="button" id="more-pairs" class="text-button" aria-expanded="false" hidden></button>
+        </div>
+      </div>
+    </section>
+    <div>
+      <section class="panel" aria-labelledby="desk-title">
+        <div class="panel-head"><h2 id="desk-title">手动复核</h2></div>
+        <div class="desk-body">
+          <p id="outcome" class="status" role="status" hidden></p>
+          <p id="finished" class="finished" hidden>本机已复算 26 份名单的全部站对。保存战报与复核 JSON，可交给他人独立验证。</p>
+          <details id="editor" class="manual-entry">
+            <summary>手动提交或调整名单</summary>
+            <div class="ai-copy">
+              <label class="field">任务轮数
+                <select id="rounds">
+                  <option value="1">1 轮</option>
+                  <option value="3">3 轮</option>
+                  <option value="5">5 轮</option>
+                </select>
+              </label>
+              <button class="button" id="copy" type="button">复制 AI 任务</button>
+              <span id="copy-state" class="subtle" role="status"></span>
+            </div>
+            <p class="ai-intro">可把任务交给其他会话，再把返回的候选 JSON 粘贴到这里复核。</p>
+            <details id="text-view" class="text-view" hidden>
+              <summary>查看已生成的任务文本</summary>
+              <textarea id="prompt" rows="5" aria-label="AI 任务文本" readonly></textarea>
+            </details>
+            <label class="field">署名<input id="author" maxlength="128" autocomplete="off" value="旅人"></label>
+            <form id="paste-form" style="margin-top:10px">
+              <label class="field">AI 候选 JSON<textarea id="candidate" rows="4" spellcheck="false" required placeholder="粘贴 AI 返回的完整 JSON 对象"></textarea></label>
+              <button class="button" id="submit-ai" type="submit">交裁判复核</button>
+            </form>
+            <details>
+              <summary>自己调整一份名单</summary>
+              <form id="move-form" class="manual-controls">
+                <label class="field">要调整的名单<select id="block"></select></label>
+                <div class="two">
+                  <label class="field">移出<select id="remove"></select></label>
+                  <label class="field">加入<select id="add"></select></label>
+                </div>
+                <p id="preview" class="preview" aria-live="polite"></p>
+                <button class="button secondary" id="apply" type="submit">复核并存档</button>
+              </form>
+            </details>
+          </details>
+          <div id="change" class="change" hidden>
+            <h3>刚才这轮</h3>
+            <p id="gained" class="changed-gain"></p>
+            <p id="lost" class="changed-loss"></p>
+          </div>
+        </div>
+      </section>
+      <section class="panel report" aria-labelledby="report-title">
+        <div class="panel-head"><h2 id="report-title">通联战报</h2></div>
+        <div class="desk-body">
+          <ol id="trail" class="trail"></ol>
+          <p id="notes" class="notes" hidden></p>
+          <p class="subtle">裁判消息、模型任务和研究备注保留原文。</p>
+          <div class="report-actions">
+            <button class="button secondary" id="refresh" type="button">刷新本机进度</button>
+            <a class="button secondary" id="report">查看可打印战报</a>
+            <a class="button secondary" id="save-report" download>收藏 HTML</a>
+            <a class="button secondary" id="save-checkpoint" download>导出复核 JSON</a>
+          </div>
+          <div class="neighborhood">
+            <div class="report-actions">
+              <button class="button secondary" id="audit-neighborhood" type="button">核验单站替换</button>
+              <a class="button secondary" id="save-neighborhood" download hidden>下载邻域证书</a>
+            </div>
+            <p id="audit-status" role="status"></p>
+            <p id="audit-scope">核验范围限于当前存档的一次单站替换。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<script>
+"use strict";
+window.GameLanguage = (() => {
+  const en = new Map([
+    ["四镜驿站", "Four Realms Relay"], ["单人 · 本机存档", "Solo · local save"],
+    ["四十九站全覆盖", "Cover all 49 stations"],
+    ["用 26 份名单覆盖全部 1,176 对，每份 11 站。两站同组即通联。", "Cover all 1,176 station pairs with 26 lists of 11 stations. A pair is connected when both stations share a list."],
+    ["已核对的公开构造用 27 份。起点删去其中一份，留下 16 个缺口。", "A verified published construction uses 27 lists. The starting point removes one list, leaving 16 uncovered pairs."],
+    ["公开基线", "Published baseline"], ["本机最好覆盖", "Best local coverage"],
+    ["正在打开存档", "Opening save"], ["正在打开本机存档…", "Opening local save…"],
+    ["重新读取存档", "Retry loading save"], ["站对通联图", "Station pair map"],
+    ["已通联", "Connected"], ["待通联", "Uncovered"], ["本轮新增", "Gained this round"],
+    ["本轮遗失", "Lost this round"], ["点一个站对查看通联情况。", "Select a pair to inspect its connection."],
+    ["遗留站对", "Uncovered pairs"], ["手动复核", "Manual review"],
+    ["本机已复算 26 份名单的全部站对。保存战报与复核 JSON，可交给他人独立验证。", "The local judge has checked all pairs in the 26 lists. Save the report and review JSON for independent verification."],
+    ["手动提交或调整名单", "Submit or adjust a list manually"], ["任务轮数", "Task rounds"],
+    ["复制 AI 任务", "Copy AI task"],
+    ["可把任务交给其他会话，再把返回的候选 JSON 粘贴到这里复核。", "You can send the task to another chat, then paste its candidate JSON here for review."],
+    ["查看已生成的任务文本", "View generated task text"], ["AI 任务文本", "AI task text"],
+    ["署名", "Name"], ["AI 候选 JSON", "AI candidate JSON"],
+    ["粘贴 AI 返回的完整 JSON 对象", "Paste the complete JSON object returned by the AI"],
+    ["交裁判复核", "Submit to judge"], ["自己调整一份名单", "Adjust one list yourself"],
+    ["要调整的名单", "List to adjust"], ["移出", "Remove"], ["加入", "Add"],
+    ["复核并存档", "Check and save"], ["刚才这轮", "This round"], ["通联战报", "Coverage report"],
+    ["刷新本机进度", "Refresh local progress"], ["查看可打印战报", "View printable report"],
+    ["收藏 HTML", "Save HTML"], ["导出复核 JSON", "Export review JSON"],
+    ["核验单站替换", "Check one-station swaps"], ["下载邻域证书", "Download neighborhood certificate"],
+    ["核验范围限于当前存档的一次单站替换。", "The check covers one-station swaps from the current save."],
+    ["裁判消息、模型任务和研究备注保留原文。", "Judge messages, model tasks, and research notes remain in their original language."],
+    ["覆盖进度", "Coverage progress"], ["图例", "Legend"], ["站对覆盖矩阵", "Station pair coverage matrix"],
+    ["全境已通联", "All pairs connected"], ["起始名单", "Starting lists"],
+    ["初始成绩", "Starting score"], ["轮数", "Rounds"],
+    ["收起遗留站对", "Collapse uncovered pairs"], ["这次换位会与另一份名单重复。", "This swap would duplicate another list."],
+    ["无", "None"], ["正在复算每种合法替换…", "Checking every legal swap…"],
+    ["暂时无法核验。", "Could not verify right now."],
+    ["本机存档已更新。刷新进度后再核验。", "The local save changed. Refresh before checking again."],
+    ["正在打开本机存档…", "Opening local save…"], ["无法读取关卡", "Could not load puzzle"],
+    ["已刷新本机进度。", "Local progress refreshed."],
+    ["未能打开本机存档。请确认已启动四镜驿站服务，再重新读取。", "Could not open the local save. Check that the relay service is running, then retry."],
+    ["填入署名后即可提交。", "Enter a name before submitting."],
+    ["本机裁判正在复算站对…", "The local judge is checking station pairs…"],
+    ["候选未能保存", "Candidate could not be saved"], ["复核通过，已存入本机。", "Verified and saved locally."],
+    ["本机裁判暂时无法复算。", "The local judge could not check this now."],
+    ["JSON 格式有误。请粘贴从左花括号到右花括号的完整候选。", "Invalid JSON. Paste the complete candidate from the opening to the closing brace."],
+    ["这份候选与当前关卡或父档不符。请复制本页的最新任务。", "This candidate does not match the current puzzle or parent save. Copy the latest task."],
+    ["正在生成任务…", "Generating task…"], ["任务生成失败。", "Task generation failed."],
+    ["任务已选中，请使用系统复制。", "Task selected. Use the system copy command."],
+    ["任务生成失败，请重试。", "Task generation failed. Please retry."],
+    ["每格代表一对驿站", "Each cell is one station pair"],
+    ["自动研究", "Automated research"], ["执行方式", "Run mode"],
+    ["Codex 订阅自动运行", "Codex plan automation"], ["Codex 桌面对话 · MCP", "Codex desktop chat · MCP"],
+    ["本机搜索（不使用订阅）", "Local search (no plan use)"],
+    ["开始自动运行", "Start automated run"], ["停止运行", "Stop run"],
+    ["预计 Token", "Estimated tokens"], ["预计用时", "Estimated time"],
+    ["在 Codex 中接手本局", "Take over in Codex"], ["在已有对话中接手", "Take over in an existing chat"],
+    ["本局接手指令", "Handoff prompt"], ["个人套餐连接与周上限", "Personal plan connection and weekly cap"],
+    ["获取官方授权链接", "Get official sign-in link"], ["前往 OpenAI 授权", "Open OpenAI sign-in"],
+    ["刷新登录状态", "Refresh sign-in status"], ["打开 ChatGPT 用量设置", "Open ChatGPT usage settings"],
+    ["，为本游戏设置 1–99% 的周上限。回到这里填写实际设置值。", ", set a 1–99% weekly cap for this game, then enter the actual value here."],
+    ["官方已设周上限", "Official weekly cap set to"],
+    ["我已在官方为本游戏设置上述上限，并确认仅使用个人套餐，不使用充值额度。", "I set this cap for this game in official settings and confirm use of my personal plan only, without purchased credits."],
+    ["保存我的确认", "Save my confirmation"], ["正在查看任务…", "Checking task…"],
+    ["下载运行记录", "Download run record"], ["用时 —", "Elapsed —"],
+    ["整局轮次进度", "Run progress"], ["逐轮回执将在这里显示。", "Round receipts will appear here."],
+    ["逐轮回执", "Round receipts"], ["尚未运行", "Not started"], ["等待领取", "Waiting to be claimed"],
+    ["运行中", "Running"], ["正在停止", "Stopping"], ["已完成", "Completed"],
+    ["已停止", "Stopped"], ["已暂停", "Paused"], ["运行失败", "Run failed"],
+    ["本局没有裁判回执。", "This run has no judge receipts."],
+    ["当前题目已达成目标", "The target has been reached"], ["暂时无法读取任务", "Could not load task"],
+    ["等待 Codex 通过 MCP 领取", "Waiting for Codex to claim via MCP"],
+    ["正在开局…", "Starting…"], ["提交到对话队列", "Submit to chat queue"],
+    ["正在停止…", "Stopping…"], ["待测速", "Waiting for pace data"],
+    ["逐轮回执将在这里显示。", "Round receipts will appear here."],
+    ["正在读取本机授权状态…", "Reading local authorization status…"],
+    ["本机游戏尚未连接个人套餐。请先获取授权链接。", "This game is not connected to a personal plan. Get the sign-in link first."],
+    ["已登录。请重新授权本游戏使用个人套餐。", "Signed in. Reauthorize this game to use your personal plan."],
+    ["已获套餐授权。请在官方页面设置本游戏的周上限，并在此确认。", "Plan access granted. Set this game's weekly cap in official settings, then confirm it here."],
+    ["无法读取本机的订阅连接状态。", "Could not read local plan connection status."],
+    ["本机服务返回的官方授权链接无效。", "The local service returned an invalid official sign-in link."],
+    ["请打开官方授权链接。完成后回到此处，点击「刷新登录状态」。", "Open the official sign-in link. When finished, return here and select Refresh sign-in status."],
+    ["本机订阅设置暂不可用。", "Local plan setup is unavailable right now."],
+    ["本机授权状态待确认。", "Local authorization is awaiting confirmation."],
+    ["连接个人套餐后，本机会自动领题和交卷。需要授权或确认周上限时，这里会显示原因。", "Once your personal plan is connected, this device can claim and submit rounds automatically. Authorization or cap issues appear here."],
+    ["在这台电脑上搜索候选，然后交给同一本地裁判复核。", "Search for candidates on this computer, then submit them to the same local judge."],
+    ["在 Codex 的「烧额游戏」工作区发送接手指令。发送一次即可继续本局全部轮次。", "Send the handoff prompt in the Codex workspace. Send it once to continue all rounds of this run."],
+    ["对话通过 MCP 提交方案后，这里会显示裁判回执。", "Judge receipts appear here after the chat submits candidates through MCP."],
+    ["选好轮数并提交，随后在 Codex 中接手。每轮结果会自动回到这里。", "Choose the round count, submit, then take over in Codex. Each round returns here automatically."],
+    ["暂时无法联系自动研究服务，页面会自动重连。", "Could not contact the automated research service. This page will reconnect."],
+    ["订阅模式尚无本关实测。文本量按题面及候选格式粗估，推理消耗另计。", "No measured plan run for this puzzle yet. Text volume is a rough estimate based on the puzzle and candidate format; reasoning use is separate."],
+    ["桌面用量取决于对话长度与工具调用，等待玩家接手的时间另计。", "Desktop use depends on chat length and tool calls; takeover wait time is counted separately."],
+    ["待首轮实测", "Waiting for the first measured round"],
+    ["待实测（单轮响应限时 3 分钟）", "Awaiting measurement (three-minute response limit per round)"],
+    ["不足 1 秒", "Under 1 second"], ["少于 0.1 秒", "Under 0.1 second"],
+  ]);
+  const patterns = [
+    [/^1 轮$/, "1 round"], [/^(\d+) 轮$/, "$1 rounds"], [/^(\d+) 个驿站$/, "$1 stations"],
+    [/^还差 (\d+) 对$/, "$1 pairs remaining"],
+    [/^遗留站对 · (\d+)$/, "Uncovered pairs · $1"],
+    [/^展开全部 (\d+) 对$/, "Show all $1 pairs"],
+    [/^查看 (.+) 号站的通联$/, "Inspect connection for stations $1"],
+    [/^(.+) 号站 · 已通联，见名单 (.+)$/, "Stations $1 · connected in lists $2"],
+    [/^(.+) 号站 · 待通联，试着把两站编进同一份名单。$/, "Stations $1 · uncovered; try placing both in one list."],
+    [/^第 (\d+) 组 · (.+)$/, "List $1 · $2"], [/^(\d+) 号站$/, "Station $1"],
+    [/^预览 (.+) → (.+)，新增 (\d+) 对，遗失 (\d+) 对。$/, "Preview $1 → $2; $3 gained, $4 lost pairs."],
+    [/^新增 (\d+) 对 · (.+)$/, "$1 pairs gained · $2"],
+    [/^遗失 (\d+) 对 · (.+)$/, "$1 pairs lost · $2"],
+    [/^已复制 (\d+) 轮任务$/, "Copied $1-round task"],
+    [/^(\d+) 站的覆盖矩阵，已通联 (\d+) 对，待通联 (\d+) 对$/, "$1-station coverage matrix: $2 connected pairs, $3 uncovered."],
+    [/^用时 (.+)$/, "Elapsed $1"], [/^(\d+) 分$/, "$1 min"], [/^(\d+(?:\.\d+)?) 秒$/, "$1 sec"],
+    [/^第 (\d+) 轮 · 已存档(.*)$/, "Round $1 · saved$2"],
+    [/^第 (\d+) 轮 · 未更新(.*)$/, "Round $1 · no update$2"],
+    [/^(.+) · 已交 (\d+) \/ (\d+) 轮$/, "$1 · $2 / $3 rounds submitted"],
+    [/^本轮已检查 ([\d,]+) 个候选$/, "$1 candidates checked this round"],
+    [/^实测 (.+) 轮\/分钟$/, "Measured $1 rounds/min"],
+    [/^实测输出 (.+) token\/秒$/, "Measured output $1 tokens/sec"],
+    [/^预计剩余约 (.+)$/, "About $1 remaining"],
+    [/^已连接个人套餐。你已确认本游戏的周上限为 (\d+)%。下次点击「开始自动运行」即可开局。$/, "Personal plan connected. You confirmed a $1% weekly cap for this game. Select Start automated run to begin."],
+  ];
+  const roundsWord = number => Number(number) === 1 ? "round" : "rounds";
+  function durationEn(value) {
+    return value.replace(/(\d+) 分/g, "$1 min").replace(/(\d+(?:\.\d+)?) 秒/g, "$1 sec");
+  }
+  function estimateBasisEn(value) {
+    const suffix = / 按 (\d+) 轮估算。$/.exec(value);
+    const base = suffix ? value.slice(0, suffix.index) : value;
+    let result = en.get(base);
+    let match;
+    if (!result && (match = /^(本关|同规模关卡)桌面长对话 (\d+) 轮实测。总 token 含缓存输入；耗时从接手算起。$/.exec(base))) {
+      result = `${match[1] === "本关" ? "This puzzle" : "A same-size puzzle"}: ${match[2]} measured ${roundsWord(match[2])} in a desktop chat. Total tokens include cached input; time starts at takeover.`;
+    }
+    if (!result && (match = /^本机搜索和裁判耗时，参考 (\d+) 轮实测。$/.exec(base))) {
+      result = `Local search and judge time, based on ${match[1]} measured ${roundsWord(match[1])}.`;
+    }
+    if (!result && (match = /^本关订阅回执含 (\d+) 轮总 token 和 (\d+) 轮耗时。$/.exec(base))) {
+      result = `This puzzle has plan receipts for ${match[1]} ${roundsWord(match[1])} of total tokens and ${match[2]} ${roundsWord(match[2])} of timing.`;
+    }
+    if (!result) return value;
+    return result + (suffix ? ` Estimated for ${suffix[1]} ${roundsWord(suffix[1])}.` : "");
+  }
+  function autoValueEn(node, value) {
+    const parent = node.parentElement;
+    if (parent?.closest("[data-estimate-basis]")) return estimateBasisEn(value);
+    if (parent?.closest("[data-estimate-token]")) {
+      const text = /^文本约 ([\d,.]+) token \+ 推理$/.exec(value);
+      if (text) return `About ${text[1]} text tokens + reasoning`;
+      const approx = /^约 (.+)$/.exec(value);
+      return approx ? `About ${approx[1]}` : translated(value);
+    }
+    if (parent?.closest("[data-estimate-time]")) {
+      const approx = /^约 (.+)$/.exec(value);
+      return approx ? `About ${durationEn(approx[1])}` : durationEn(translated(value));
+    }
+    if (parent?.closest("[data-progress]")) {
+      const match = /^(.+) · 已交 (\d+) \/ (\d+) 轮$/.exec(value);
+      return match ? `${en.get(match[1]) || match[1]} · ${match[2]} / ${match[3]} ${roundsWord(match[3])} submitted` : translated(value);
+    }
+    if (parent?.closest("[data-time]")) {
+      const match = /^用时 (.+)$/.exec(value);
+      return match ? `Elapsed ${durationEn(match[1])}` : translated(value);
+    }
+    if (parent?.closest("[data-work]")) {
+      const match = /^(.*) · 本轮已检查 ([\d,]+) 个候选$/.exec(value);
+      return match ? `${match[1]} · ${match[2]} candidates checked this round` : translated(value);
+    }
+    if (parent?.closest("[data-speed]")) {
+      let match = /^实测 (.+) 轮\/分钟$/.exec(value);
+      if (match) return `Measured ${match[1]} rounds/min`;
+      match = /^交卷 (.+) 轮\/分钟（含领取等待）$/.exec(value);
+      return match ? `Submitted ${match[1]} rounds/min (including claim wait)` : translated(value);
+    }
+    if (parent?.closest("[data-output-speed]")) {
+      const match = /^实测输出 (.+) token\/秒$/.exec(value);
+      return match ? `Measured output ${match[1]} tokens/sec` : translated(value);
+    }
+    if (parent?.closest("[data-remaining]")) {
+      const known = new Map([["预计剩余 等待裁判完成", "Estimated remaining: waiting for judge"],
+        ["预计剩余 待测", "Estimated remaining: unknown"],
+        ["预计剩余 本轮已超参考用时", "This round exceeded the reference time"]]);
+      if (known.has(value)) return known.get(value);
+      let match = /^预计剩余约 (.+)（(按已交轮次|按历史参考)）$/.exec(value);
+      if (match) return `About ${durationEn(match[1])} remaining (${match[2] === "按已交轮次" ? "based on submitted rounds" : "based on previous runs"})`;
+      match = /^本轮已超参考，后续轮次预计 (.+)（(按已交轮次|按历史参考)）$/.exec(value);
+      return match ? `This round exceeded the reference; later rounds need about ${durationEn(match[1])} (${match[2] === "按已交轮次" ? "based on submitted rounds" : "based on previous runs"})` : translated(value);
+    }
+    return translated(value);
+  }
+  const originals = new WeakMap(), displayed = new WeakMap();
+  const attributes = new WeakMap(), shownAttributes = new WeakMap();
+  let current;
+  const requested = new URLSearchParams(location.search).get("lang");
+  let saved = null;
+  try { saved = localStorage.getItem("research-games-language"); } catch {}
+  current = ["en", "zh-CN"].includes(requested) ? requested
+    : ["en", "zh-CN"].includes(saved) ? saved
+    : navigator.language?.toLowerCase().startsWith("en") ? "en" : "zh-CN";
+  if (["en", "zh-CN"].includes(requested)) {
+    try { localStorage.setItem("research-games-language", requested); } catch {}
+  }
+  function translated(value) {
+    const text = value.trim();
+    let result = en.get(text);
+    if (!result) for (const [pattern, replacement] of patterns) {
+      if (pattern.test(text)) { result = text.replace(pattern, replacement); break; }
+    }
+    return result ? value.replace(text, result) : value;
+  }
+  function text(node) {
+    if (node.parentElement?.closest("script,style,textarea,[data-native],.language-switch")) return;
+    if (!originals.has(node) || node.nodeValue !== displayed.get(node)) originals.set(node, node.nodeValue);
+    const value = current === "en" ? autoValueEn(node, originals.get(node)) : originals.get(node);
+    displayed.set(node, value);
+    if (node.nodeValue !== value) node.nodeValue = value;
+  }
+  function element(node) {
+    if (node.closest("script,style,textarea,[data-native],.language-switch")) return;
+    const original = attributes.get(node) || {}, shown = shownAttributes.get(node) || {};
+    for (const name of ["aria-label", "placeholder", "title"]) {
+      if (!node.hasAttribute(name)) continue;
+      const value = node.getAttribute(name);
+      if (!(name in original) || value !== shown[name]) original[name] = value;
+      const next = current === "en" ? translated(original[name]) : original[name];
+      shown[name] = next;
+      if (value !== next) node.setAttribute(name, next);
+    }
+    attributes.set(node, original); shownAttributes.set(node, shown);
+  }
+  function walk(root) {
+    if (root.nodeType === Node.TEXT_NODE) { text(root); return; }
+    if (root.nodeType !== Node.ELEMENT_NODE) return;
+    element(root);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) walker.currentNode.nodeType === Node.TEXT_NODE ? text(walker.currentNode) : element(walker.currentNode);
+  }
+  function setLanguage(value) {
+    current = value;
+    document.documentElement.lang = value;
+    document.title = value === "en" ? "Four Realms Relay" : "四镜驿站";
+    for (const code of ["zh", "en"]) document.getElementById("lang-" + code).setAttribute("aria-pressed", String(code === (value === "en" ? "en" : "zh")));
+    walk(document.body);
+  }
+  for (const code of ["zh", "en"]) document.getElementById("lang-" + code).addEventListener("click", () => {
+    const value = code === "en" ? "en" : "zh-CN";
+    try { localStorage.setItem("research-games-language", value); } catch {}
+    const url = new URL(location.href);
+    url.searchParams.set("lang", value);
+    history.replaceState(history.state, "", url.href);
+    setLanguage(value);
+  });
+  new MutationObserver(records => {
+    for (const record of records) {
+      if (record.type === "characterData") text(record.target);
+      else if (record.type === "attributes") element(record.target);
+      else for (const node of record.addedNodes) walk(node);
+    }
+  }).observe(document.body, {subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:["aria-label","placeholder","title"]});
+  setLanguage(current);
+  return {get current() { return current; }, refresh() { walk(document.body); }};
+})();
+</script>
+<script src="/autorun.js"></script>
+<script>
+  "use strict";
+  const byId = id => document.getElementById(id);
+  const pack = "relay-49-frontier";
+  const automatic = window.AutoRun?.attach(byId("automatic"), load);
+  const canvas = byId("matrix");
+  const ctx = canvas.getContext("2d");
+  const chart = {x: 45, y: 39, size: 495};
+  let game;
+  let saving = false;
+  let expanded = false;
+  let selected = null;
+  let changes = {gained: [], lost: []};
+  let neighborhoodUrl;
+
+  const pairKey = ([a, b]) => Math.min(a, b) + "–" + Math.max(a, b);
+  const pairSet = pairs => new Set(pairs.map(pairKey));
+  const listPairs = rows => {
+    const pairs = new Set();
+    for (const row of rows) {
+      for (let a = 0; a < row.length; a++) {
+        for (let b = a + 1; b < row.length; b++) pairs.add(pairKey([row[a], row[b]]));
+      }
+    }
+    return pairs;
+  };
+
+  function difference(before, after) {
+    const oldMissing = pairSet(before);
+    const newMissing = pairSet(after);
+    return {
+      gained: before.filter(pair => !newMissing.has(pairKey(pair))),
+      lost: after.filter(pair => !oldMissing.has(pairKey(pair)))
+    };
+  }
+
+  function notice(text, error = false) {
+    const target = byId("outcome");
+    target.hidden = !text;
+    target.textContent = text;
+    target.classList.toggle("error", error);
+  }
+
+  function draw() {
+    const {n} = game.state;
+    const cell = chart.size / n;
+    const missed = pairSet(game.missing);
+    const gained = pairSet(changes.gained);
+    const lost = pairSet(changes.lost);
+    const selectedKey = selected && pairKey(selected);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = (n <= 10 ? "600 18px " : "600 11px ") + "system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (let station = 1; station <= n; station++) {
+      if (n > 10 && (station - 1) % 4 !== 0 && station !== n) continue;
+      ctx.fillStyle = "#4b5d54";
+      ctx.fillText(station, chart.x + (station - .5) * cell, chart.y - 13);
+      ctx.fillText(station, chart.x - 14, chart.y + (station - .5) * cell);
+    }
+    for (let a = 1; a <= n; a++) {
+      for (let b = a; b <= n; b++) {
+        const key = pairKey([a, b]);
+        const x = chart.x + (b - 1) * cell, y = chart.y + (a - 1) * cell;
+        const gap = n <= 10 ? 4 : 1;
+        ctx.fillStyle = a === b ? "#e7e2d6" : "#91bca6";
+        if (missed.has(key)) ctx.fillStyle = "#e7bda6";
+        if (gained.has(key)) ctx.fillStyle = "#0c6351";
+        if (lost.has(key)) ctx.fillStyle = "#943d27";
+        ctx.fillRect(x + gap / 2, y + gap / 2, cell - gap, cell - gap);
+        if (key === selectedKey) {
+          ctx.strokeStyle = "#202d25";
+          ctx.lineWidth = n <= 10 ? 3 : 2;
+          ctx.strokeRect(x, y, cell, cell);
+        }
+      }
+    }
+    if (n <= 10) {
+      ctx.fillStyle = "#526157";
+      ctx.textAlign = "left";
+      ctx.font = "500 18px system-ui, sans-serif";
+      ctx.fillText("每格代表一对驿站", chart.x + 8, chart.y + chart.size - cell * .52);
+    }
+  }
+
+  function showSelected() {
+    if (!selected) {
+      byId("pair-info").textContent = "点一个站对查看通联情况。";
+      return;
+    }
+    const together = [];
+    game.covered_blocks.forEach((block, index) => {
+      if (selected.every(station => block.includes(station))) together.push(index + 1);
+    });
+    byId("pair-info").textContent = pairKey(selected) + " 号站 · " +
+      (together.length ? "已通联，见名单 " + together.join("、") : "待通联，试着把两站编进同一份名单。");
+    for (const chip of byId("missing").children) {
+      chip.setAttribute("aria-pressed", String(chip.textContent === pairKey(selected)));
+    }
+  }
+
+  function choosePair(pair) {
+    selected = pair;
+    showSelected();
+    draw();
+  }
+
+  function renderMissing() {
+    const visible = expanded ? game.missing : game.missing.slice(0, 18);
+    byId("missing-title").textContent = "遗留站对 · " + game.missing.length;
+    byId("missing").replaceChildren(...visible.map(pair => {
+      const chip = document.createElement("button");
+      chip.className = "chip";
+      chip.type = "button";
+      chip.textContent = pairKey(pair);
+      chip.setAttribute("aria-label", "查看 " + pairKey(pair) + " 号站的通联");
+      chip.addEventListener("click", () => choosePair(pair));
+      return chip;
+    }));
+    const more = byId("more-pairs");
+    more.hidden = game.missing.length <= 18;
+    more.setAttribute("aria-expanded", String(expanded));
+    more.textContent = expanded ? "收起遗留站对" : "展开全部 " + game.missing.length + " 对";
+    showSelected();
+  }
+
+  function rowsForMove() {
+    const rows = game.covered_blocks.map(block => block.slice());
+    const index = Number(byId("block").value);
+    const removed = Number(byId("remove").value);
+    const added = Number(byId("add").value);
+    rows[index] = rows[index].filter(station => station !== removed).concat(added).sort((a, b) => a - b);
+    return {rows, index, removed, added};
+  }
+
+  function previewMove() {
+    const {rows} = rowsForMove();
+    const duplicate = new Set(rows.map(row => row.join(","))).size !== rows.length;
+    const previous = listPairs(game.covered_blocks);
+    const current = listPairs(rows);
+    const gained = [...current].filter(pair => !previous.has(pair)).length;
+    const lost = [...previous].filter(pair => !current.has(pair)).length;
+    const delta = gained - lost;
+    byId("preview").textContent = duplicate ? "这次换位会与另一份名单重复。" :
+      "预览 " + game.state.score + " → " + current.size + "，新增 " + gained + " 对，遗失 " + lost + " 对。";
+    byId("apply").disabled = duplicate || delta <= 0 || saving;
+  }
+
+  function stationOptions() {
+    const block = game.covered_blocks[Number(byId("block").value)];
+    const available = Array.from({length: game.state.n}, (_, index) => index + 1);
+    byId("remove").replaceChildren(...block.map(station => new Option(station + " 号站", station)));
+    byId("add").replaceChildren(...available.filter(station => !block.includes(station))
+      .map(station => new Option(station + " 号站", station)));
+    previewMove();
+  }
+
+  function render(data) {
+    game = data;
+    const {state} = data;
+    byId("boot").hidden = true;
+    byId("retry").hidden = true;
+    byId("play").hidden = false;
+    byId("score").textContent = state.score.toLocaleString("zh-CN");
+    byId("total").textContent = "/ " + state.total.toLocaleString("zh-CN");
+    byId("progress").max = state.total;
+    byId("progress").value = state.score;
+    byId("achievement").textContent = data.achievement || (state.complete ? "全境已通联" : "还差 " + data.missing.length + " 对");
+    byId("map-size").textContent = state.n + " 个驿站";
+    canvas.setAttribute("aria-label", state.n + " 站的覆盖矩阵，已通联 " + state.score + " 对，待通联 " + data.missing.length + " 对");
+    if (!selected) selected = data.missing[0] || null;
+    renderMissing();
+    draw();
+    byId("legend-gained").hidden = !changes.gained.length;
+    byId("legend-lost").hidden = !changes.lost.length;
+    byId("finished").hidden = !state.complete;
+    byId("editor").hidden = state.complete;
+    if (!state.complete) {
+      byId("block").replaceChildren(...data.covered_blocks.map((row, index) =>
+        new Option("第 " + (index + 1) + " 组 · " + row.join("、"), index)));
+      stationOptions();
+    }
+    byId("prompt").value = "";
+    byId("text-view").hidden = true;
+    byId("copy-state").textContent = "";
+    byId("trail").replaceChildren(...data.lineage.map(item => {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.textContent = item.author === "seed" ? "起始名单" : item.author;
+      const score = document.createElement("strong");
+      score.textContent = item.score.toLocaleString("zh-CN") + " / " + state.total.toLocaleString("zh-CN");
+      li.append(name, score);
+      return li;
+    }));
+    byId("notes").hidden = !data.handoff;
+    byId("notes").textContent = data.handoff;
+    automatic?.setPack(pack, !state.complete, data.prompt, state.hash);
+  }
+
+  function renderChanges(data) {
+    const changed = game && game.state.hash !== data.state.hash;
+    if (changed) {
+      changes = difference(game.missing, data.missing);
+      resetAudit();
+    }
+    render(data);
+    if (!changed) return;
+    byId("change").hidden = false;
+    byId("gained").textContent = "新增 " + changes.gained.length + " 对 · " +
+      (changes.gained.map(pairKey).join("、") || "无");
+    byId("lost").textContent = "遗失 " + changes.lost.length + " 对 · " +
+      (changes.lost.map(pairKey).join("、") || "无");
+  }
+
+  function resetAudit() {
+    const link = byId("save-neighborhood");
+    if (neighborhoodUrl) URL.revokeObjectURL(neighborhoodUrl);
+    neighborhoodUrl = undefined;
+    link.removeAttribute("href");
+    link.hidden = true;
+    byId("audit-status").textContent = "";
+    byId("audit-status").classList.remove("audit-error");
+    byId("audit-scope").textContent = "核验范围限于当前存档的一次单站替换。";
+  }
+
+  async function auditNeighborhood() {
+    resetAudit();
+    const button = byId("audit-neighborhood");
+    const status = byId("audit-status");
+    button.disabled = true;
+    status.textContent = "正在复算每种合法替换…";
+    try {
+      const response = await fetch("/api/neighborhood?pack=" + encodeURIComponent(pack));
+      const proof = await response.json();
+      if (!response.ok) throw new Error(proof.error || "暂时无法核验。");
+      if (proof.parent_hash !== game.state.hash) {
+        throw new Error("本机存档已更新。刷新进度后再核验。");
+      }
+      const number = value => value.toLocaleString("zh-CN");
+      const best = proof.best_delta > 0 ? "，最佳净增 " + number(proof.best_delta) + " 对" : "";
+      status.textContent = proof.title + " · " + number(proof.total_neighbors) + " 种合法替换。" +
+        "更优 " + number(proof.better) + "、持平 " + number(proof.equal) + "、下降 " +
+        number(proof.worse) + best + "。";
+      byId("audit-scope").textContent = proof.scope;
+      const json = new Blob([JSON.stringify(proof, null, 2) + "\n"], {type: "application/json"});
+      neighborhoodUrl = URL.createObjectURL(json);
+      const link = byId("save-neighborhood");
+      link.href = neighborhoodUrl;
+      link.download = "四镜驿站-邻域证书-" + proof.parent_hash.slice(0, 12) + ".json";
+      link.hidden = false;
+    } catch (error) {
+      status.textContent = error.message || "暂时无法核验。";
+      status.classList.add("audit-error");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function load() {
+    const boot = byId("boot");
+    boot.hidden = false;
+    boot.classList.remove("error");
+    boot.textContent = "正在打开本机存档…";
+    byId("retry").hidden = true;
+    try {
+      const response = await fetch("/api/game?pack=" + encodeURIComponent(pack));
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "无法读取关卡");
+      const refreshing = Boolean(game);
+      renderChanges(data);
+      if (refreshing) notice("已刷新本机进度。");
+    } catch (error) {
+      boot.textContent = "未能打开本机存档。请确认已启动四镜驿站服务，再重新读取。";
+      boot.classList.add("error");
+      byId("retry").hidden = false;
+    }
+  }
+
+  async function submit(candidate, fromPaste = false) {
+    if (saving) return;
+    const author = byId("author").value.trim();
+    if (!author) {
+      notice("填入署名后即可提交。", true);
+      byId("author").focus();
+      return;
+    }
+    saving = true;
+    byId("apply").disabled = true;
+    byId("submit-ai").disabled = true;
+    notice("本机裁判正在复算站对…");
+    try {
+      const response = await fetch("/api/submit", {
+        method:"POST",
+        headers:{"Content-Type": "application/json"},
+        body:JSON.stringify({author, candidate})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "候选未能保存");
+      renderChanges(data);
+      if (fromPaste) byId("candidate").value = "";
+      notice(data.message || "复核通过，已存入本机。");
+    } catch (error) {
+      notice(error.message || "本机裁判暂时无法复算。", true);
+    } finally {
+      saving = false;
+      if (!game.state.complete) previewMove();
+      byId("submit-ai").disabled = false;
+    }
+  }
+
+  byId("report").href = "/report?pack=" + pack;
+  byId("save-report").href = byId("report").href;
+  byId("save-report").download = "四镜驿站-四十九站战报.html";
+  byId("save-checkpoint").href = "/api/checkpoint?pack=" + pack;
+  byId("save-checkpoint").download = "四镜驿站-四十九站复核.json";
+  byId("retry").addEventListener("click", load);
+  byId("refresh").addEventListener("click", load);
+  byId("audit-neighborhood").addEventListener("click", auditNeighborhood);
+  byId("block").addEventListener("change", stationOptions);
+  byId("remove").addEventListener("change", previewMove);
+  byId("add").addEventListener("change", previewMove);
+  byId("more-pairs").addEventListener("click", () => { expanded = !expanded; renderMissing(); });
+  canvas.addEventListener("click", event => {
+    const bounds = canvas.getBoundingClientRect();
+    const cell = chart.size / game.state.n;
+    const a = Math.floor(((event.clientY - bounds.top) * canvas.height / bounds.height - chart.y) / cell) + 1;
+    const b = Math.floor(((event.clientX - bounds.left) * canvas.width / bounds.width - chart.x) / cell) + 1;
+    if (a >= 1 && b <= game.state.n && a < b) choosePair([a, b]);
+  });
+  byId("move-form").addEventListener("submit", event => {
+    event.preventDefault();
+    const {rows, index, removed, added} = rowsForMove();
+    submit({
+      pack_id:game.state.pack_id, parent_hash:game.state.hash, solution:{blocks:rows},
+      handoff:"第 " + (index + 1) + " 份名单，" + removed + " 号站换成 " + added + " 号站。"
+    });
+  });
+  byId("paste-form").addEventListener("submit", event => {
+    event.preventDefault();
+    let candidate;
+    try {
+      candidate = JSON.parse(byId("candidate").value);
+    } catch (error) {
+      notice("JSON 格式有误。请粘贴从左花括号到右花括号的完整候选。", true);
+      byId("outcome").scrollIntoView({block:"nearest"});
+      return;
+    }
+    if (candidate?.pack_id !== game.state.pack_id || candidate.parent_hash !== game.state.hash) {
+      notice("这份候选与当前关卡或父档不符。请复制本页的最新任务。", true);
+      byId("outcome").scrollIntoView({block:"nearest"});
+      return;
+    }
+    submit(candidate, true);
+  });
+  byId("rounds").addEventListener("change", () => {
+    byId("prompt").value = "";
+    byId("text-view").hidden = true;
+    byId("copy-state").textContent = "";
+  });
+  byId("copy").addEventListener("click", async () => {
+    const rounds = byId("rounds");
+    const status = byId("copy-state");
+    const copy = byId("copy");
+    copy.disabled = true;
+    rounds.disabled = true;
+    status.textContent = "正在生成任务…";
+    try {
+      const query = new URLSearchParams({pack, rounds: rounds.value});
+      const response = await fetch("/api/mission?" + query);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "任务生成失败。");
+      byId("prompt").value = result.prompt;
+      byId("text-view").hidden = false;
+      try {
+        await navigator.clipboard.writeText(result.prompt);
+        status.textContent = "已复制 " + rounds.value + " 轮任务";
+      } catch {
+        byId("text-view").open = true;
+        byId("prompt").focus();
+        byId("prompt").select();
+        status.textContent = "任务已选中，请使用系统复制。";
+      }
+    } catch (error) {
+      status.textContent = error.message || "任务生成失败，请重试。";
+    } finally {
+      copy.disabled = false;
+      rounds.disabled = false;
+    }
+  });
+  load();
+</script>
+</body>
+</html>

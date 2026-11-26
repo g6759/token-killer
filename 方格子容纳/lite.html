@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>方格冲榜 · 26 块</title>
+  <style>
+    :root{color-scheme:light;--ink:#172f2d;--muted:#4f615c;--paper:#f6f5ec;--line:#cbd3c4;--surface:#fdfcf6;--green:#276554;--green-dark:#144739;--rust:#963a24;--grid:#e8ede1}
+    *{box-sizing:border-box}
+    [hidden]{display:none!important}
+    body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 "Inter","Microsoft YaHei","PingFang SC",system-ui,sans-serif}
+    a{color:var(--green-dark);text-underline-offset:4px}
+    button,select,textarea{font:inherit}
+    a,button,canvas,select,textarea{outline-offset:4px}
+    :focus-visible{outline:2px solid var(--rust)}
+    button,select{min-height:42px}
+    button{border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;padding:7px 12px;border-radius:3px}
+    button:hover:enabled{border-color:var(--green);background:#ecf1e9}
+    button:disabled{opacity:.55;cursor:default}
+    .primary{background:var(--green-dark);color:#fff;border-color:var(--green-dark)}
+    .primary:hover:enabled{background:#205848;color:#fff}
+    .frame{width:min(1248px,100% - 48px);margin:auto}
+    .top{background:#eaf0e5;border-bottom:1px solid var(--line)}
+    .top .frame{min-height:53px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .top-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px;flex-wrap:wrap}
+    .language-switch{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+    .language-switch button{min-height:32px;border:0;border-radius:0;padding:3px 9px;font-size:12px}
+    .language-switch button+button{border-left:1px solid var(--line)}
+    .language-switch button[aria-pressed=true]{background:var(--green-dark);color:#fff}
+    .wordmark{font-weight:700;display:flex;align-items:center;gap:11px}
+    .mark{display:inline-block;border:2px solid var(--green-dark);width:20px;height:20px;position:relative;flex:none}
+    .mark::after{content:"";position:absolute;inset:4px;border:1px solid var(--green-dark);transform:rotate(32deg)}
+    main{padding:27px 0 37px}
+    h1,h2,p{margin:0}
+    h1{font-size:clamp(24px,4vw,40px);font-weight:680;letter-spacing:-.035em;line-height:1.25}
+    h2{font-size:17px;line-height:1.35}
+    .lead,.muted{color:var(--muted)}
+    .lead{margin-top:8px}
+    .layout{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(295px,1fr);gap:26px;align-items:start;margin-top:24px}
+    .board,.section{background:var(--surface);border:1px solid var(--line);min-width:0}
+    .board-top,.board-tools,.section{padding:14px 17px}
+    .board-top{border-bottom:1px solid var(--line);display:flex;gap:12px;justify-content:space-between;align-items:baseline}
+    .board-top span{font-size:13px;color:var(--muted)}
+    canvas{width:100%;max-height:540px;aspect-ratio:1.18;display:block;background-color:#eef1e7;background-image:linear-gradient(#dfe6d7 1px,transparent 1px),linear-gradient(90deg,#dfe6d7 1px,transparent 1px);background-size:22px 22px;touch-action:none}
+    canvas:focus-visible{outline-offset:-3px}
+    .board-tools{border-top:1px solid var(--line)}
+    .actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+    .feedback{margin-top:8px;min-height:1.6em;color:var(--muted)}
+    .error{color:var(--rust)}
+    .side{display:grid;gap:14px;min-width:0}
+    .scores{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:14px;padding:0}
+    .scores div{padding:15px 16px;min-width:0}
+    .scores div+div{border-left:1px solid var(--line)}
+    .tag{font-size:13px;color:var(--muted)}
+    .value{display:block;margin-top:5px;font:600 clamp(17px,3.05vw,33px)/1.3 "IBM Plex Mono",Consolas,monospace;color:var(--green-dark);letter-spacing:-.045em;overflow-wrap:anywhere}
+    .small{font-size:13px}
+    .section h2{margin-bottom:8px}
+    .section .actions{margin-top:10px}
+    .start-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:11px}
+    .start-row label{display:flex;align-items:center;gap:8px}
+    select{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:3px;padding-inline:8px}
+    .metrics{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px 12px;margin:10px 0 8px;font-variant-numeric:tabular-nums}
+    .metrics div{min-width:0}
+    .metrics dt{color:var(--muted);font-size:12px}
+    .metrics dd{margin:1px 0 0;font-size:13px;overflow-wrap:anywhere}
+    #guide{margin-top:9px}
+    #prompt{display:block;width:100%;min-height:69px;padding:7px 8px;border:1px solid var(--line);background:#f8faf4;color:var(--ink);resize:vertical;overflow-wrap:anywhere;font-size:13px}
+    #posting{border-left:3px solid var(--green)}
+    #receipt{margin-top:8px}
+    #trace-list{list-style:none;padding:0;margin:5px 0 0}
+    #trace-list li{border-top:1px solid var(--line);padding:8px 0;font-size:13px}
+    #trace-list strong{display:block;font-size:13px}
+    #trace-list button{min-height:33px;padding:3px 8px;margin-top:4px;font-size:12px}
+    #trace-list button[aria-pressed=true]{border-color:var(--green);color:var(--green-dark);background:#e6eee3}
+    #trial-status{padding:6px 17px;border-bottom:1px solid var(--line);font-size:13px;background:#edf2e8}
+    #trial-status.error{background:#faeee5}
+    @media(max-width:850px){.layout{grid-template-columns:minmax(0,1.14fr) minmax(296px,1fr);gap:14px}.frame{width:calc(100% - 32px)}}
+    @media(max-width:700px){.layout{grid-template-columns:minmax(0,1fr)}.side{gap:11px}.scores{grid-area:1 / 1}.layout>.board{grid-row:2}.side{display:contents}.value{font-size:clamp(22px,6vw,30px)}.board-top,.board-tools,.section{padding:12px}.scores{padding:0} main{padding-top:20px}}
+    @media(max-width:365px){.frame{width:calc(100% - 22px)}.board-top{display:block}.actions button{padding-inline:8px}.top .frame{align-items:flex-start;padding-block:8px}.top-actions{gap:5px}}
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="frame">
+    <div class="wordmark"><span class="mark" aria-hidden="true"></span>方格冲榜</div>
+    <div class="top-actions"><div class="language-switch" role="group" aria-label="Language / 语言"><button id="lang-zh" type="button" aria-pressed="true">中文</button><button id="lang-en" type="button" aria-pressed="false">English</button></div><a href="/">完整研究台 ↗</a></div>
+  </div>
+</header>
+<main class="frame">
+  <h1>把 26 个方格压进最小正方形</h1>
+  <p class="lead">方格边长都是 1。允许旋转和边角接触，包围边长越小，成绩越好。</p>
+  <div class="layout">
+    <section class="board" aria-labelledby="board-title">
+      <div class="board-top"><h2 id="board-title">摆放图</h2><span id="selection">拖动方格或按回车选中</span></div>
+      <p id="trial-status" hidden></p>
+      <canvas id="drawing" width="620" height="520" tabindex="0" aria-label="26 块方格棋盘。回车选择方格，方向键移动，Q 或 E 旋转。"></canvas>
+      <div class="board-tools">
+        <div class="actions">
+          <button id="rotate-left" type="button" disabled>左转 2°</button>
+          <button id="rotate-right" type="button" disabled>右转 2°</button>
+          <button id="check" type="button" disabled>验分</button>
+          <button id="save" type="button" disabled>保存改进</button>
+          <button id="reset" type="button" disabled>载入最好布局</button>
+          <button id="follow" type="button" hidden aria-pressed="true">跟踪试摆</button>
+        </div>
+        <p id="board-message" class="feedback small" role="status">正在读取本机布局。</p>
+      </div>
+    </section>
+    <div class="side">
+      <section class="section scores" aria-label="本地成绩与公开参照">
+        <div><span class="tag">本地最好边长</span><strong id="score" class="value">—</strong></div>
+        <div><span class="tag">公开最好边长</span><strong id="target" class="value">—</strong></div>
+      </section>
+      <section class="section" aria-labelledby="run">
+        <h2 id="run">Codex 快跑</h2>
+        <p class="muted small">同一条 Codex 对话连续探索不同摆法，每轮复算并交回当前最好的候选。</p>
+        <div class="start-row">
+          <label for="rounds">轮数<select id="rounds"><option value="5">5 轮</option><option value="20">20 轮</option><option value="50">50 轮</option><option value="100" selected>100 轮</option><option value="200">200 轮</option><option value="500">500 轮</option></select></label>
+          <button id="start" class="primary" type="button" disabled>创建快跑</button>
+          <button id="stop" type="button" hidden>停止</button>
+        </div>
+        <dl class="metrics">
+          <div><dt>进展</dt><dd id="progress">待创建</dd></div>
+          <div><dt>候选与速度</dt><dd id="pace">—</dd></div>
+          <div><dt>预计用时与日志 token</dt><dd id="estimate">等待实跑样本</dd></div>
+        </dl>
+        <dl class="metrics" aria-label="本局会话 token 分项">
+          <div><dt>非缓存输入</dt><dd id="usage-uncached">—</dd></div>
+          <div><dt>模型输出</dt><dd id="usage-output">—</dd></div>
+          <div><dt>缓存输入</dt><dd id="usage-cached">—</dd></div>
+          <div><dt>会话日志合计</dt><dd id="usage">—</dd></div>
+        </dl>
+        <p class="muted small">套餐余量由平台另行统计。</p>
+        <p class="muted small">裁判回执、研究日志和生成的接手指令保留原文。</p>
+        <div id="guide" hidden>
+          <label for="prompt" class="small">复制到当前 Codex 对话，接手这局。</label>
+          <textarea id="prompt" readonly></textarea>
+          <div class="actions"><button id="copy" type="button">复制接手指令</button></div>
+        </div>
+        <p id="receipt" class="muted small"></p>
+        <p id="run-message" class="feedback small" role="status"></p>
+      </section>
+      <section class="section" aria-labelledby="trace-title">
+        <h2 id="trace-title">研究现场</h2>
+        <p class="muted small" id="trace-empty">实际试摆、研究说明和裁判反馈会显示在这里。</p>
+        <ol id="trace-list"></ol>
+      </section>
+      <section id="posting" class="section" aria-labelledby="github">
+        <h2 id="github">GitHub 公开榜</h2>
+        <p id="eligibility" class="muted small">正在核对本地成绩。</p>
+        <p id="refreshed" class="muted small"></p>
+        <div class="actions">
+          <a id="bundle" href="/api/lite/submission" download hidden>下载复核包</a>
+          <a id="issue" href="https://github.com/jlevy/squares/issues/new?template=result-registration.md" target="_blank" rel="noopener noreferrer" hidden>打开 GitHub 投稿草稿 ↗</a>
+          <a id="rules" href="https://squaremath.org/report.html" target="_blank" rel="noopener noreferrer">投稿规则 ↗</a>
+          <button id="sync" type="button">核对公开上界</button>
+        </div>
+        <p id="sync-message" class="feedback small" role="status"></p>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="/lite.js" defer></script>
+</body>
+</html>
