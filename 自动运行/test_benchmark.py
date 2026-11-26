@@ -6,7 +6,8 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Barrier, Event
-from time import monotonic, monotonic_ns, sleep
+from time import monotonic, sleep
+from uuid import uuid4
 import unittest
 from unittest.mock import patch
 
@@ -275,7 +276,7 @@ class BenchmarkTests(unittest.TestCase):
                     control_lanes.wait(timeout=seconds)
                 sleep(0.02)
                 return {"text": json.dumps(request["candidate"]), "model": "test",
-                        "reasoning_effort": "high", "response_id": str(monotonic_ns()),
+                        "reasoning_effort": "high", "response_id": uuid4().hex,
                         "provider_started": started,
                         "usage": {"input_tokens": 11, "cached_input_tokens": 0, "output_tokens": 6}}
 
@@ -284,7 +285,7 @@ class BenchmarkTests(unittest.TestCase):
                                          abort=Event(), profile=profile)
             self.assertEqual(first["scenarios"]["mixed"]["stop"], "window")
             self.assertFalse(first["scenarios"]["mixed"]["comparable"])
-            self.assertTrue(first["scenarios"]["mixed-four"]["comparable"])
+            self.assertTrue(first["scenarios"]["mixed-four"]["comparable"], first["scenarios"]["mixed-four"])
             valid_control = (work / "mixed-four" / "summary.json").read_bytes()
             interrupted = (work / "mixed" / "summary.json").read_bytes()
             self.assertTrue(first["incomplete"])
@@ -293,7 +294,7 @@ class BenchmarkTests(unittest.TestCase):
             resuming = True
             resumed = benchmark._run_suite(root, work, scenarios, infer, seconds=3, live=True,
                                            abort=Event(), resume=True, profile=profile)
-            self.assertTrue(resumed["scenarios"]["mixed"]["comparable"])
+            self.assertTrue(resumed["scenarios"]["mixed"]["comparable"], resumed["scenarios"]["mixed"])
             self.assertFalse(resumed["incomplete"])
             self.assertEqual((work / "mixed-four" / "summary.json").read_bytes(), valid_control)
             self.assertEqual((work / "attempts" / "mixed-001" / "summary.json").read_bytes(), interrupted)
