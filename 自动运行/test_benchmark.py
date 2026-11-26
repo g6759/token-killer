@@ -16,6 +16,25 @@ import guided_search
 
 
 class BenchmarkTests(unittest.TestCase):
+    def test_research_improvement_is_shared_by_web_scoreboard_and_next_window(self):
+        import research_games
+        import scoreboard
+        from research_games.discrete import golomb_ruler_improvement_example
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            pack = "golomb-ruler"
+            runner = LocalJudge(root / "lane", pack)
+            winner = runner.store.submit(pack, runner.metric()["hash"], "test", golomb_ruler_improvement_example(), "")
+            proof = runner.store.export(winner["hash"])
+            self.assertTrue(benchmark.publish_record(root, pack, proof))
+            self.assertFalse(benchmark.publish_record(root, pack, proof))
+            web_store = research_games.build_store(root / research_games.DATABASE)
+            self.assertEqual(web_store.best(pack)["hash"], winner["hash"])
+            self.assertEqual(benchmark.snapshot_baselines(root, [pack])[pack]["tip"], winner["hash"])
+            entries = scoreboard.verify(scoreboard.collect(root))["entries"]
+            self.assertEqual([entry["pack_id"] for entry in entries], [pack])
+
     def test_research_packs_are_registered_as_independent_single_lane_scenarios(self):
         import research_games
 

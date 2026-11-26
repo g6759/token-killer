@@ -178,13 +178,25 @@ def snapshot_baselines(workspace, packs):
             source = (workspace / folder / filename).resolve()
             if source.is_file():
                 with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as original:
-                    with closing(sqlite3.connect(target / filename)) as copy:
+                    snapshot = target / (research_games.DATABASE if filename == research_games.DATABASE.name else filename)
+                    snapshot.parent.mkdir(parents=True, exist_ok=True)
+                    with closing(sqlite3.connect(snapshot)) as copy:
                         original.backup(copy)
         baselines = {}
         for pack in sorted(set(packs)):
             judge = LocalJudge(target, pack)
             baselines[pack] = judge.store.export(judge.metric()["hash"])
         return baselines
+
+
+def publish_record(workspace, pack, proof):
+    """Ingest a verified improvement into the store opened by the game's web page."""
+    if pack in research_games.PACKS:
+        store = research_games.build_store(workspace / research_games.DATABASE)
+    else:
+        directory = workspace / ("方格子容纳" if pack.startswith("square-") else "四境驿站")
+        store = LocalJudge(directory, pack).store
+    return store.ingest(proof, improvement_only=True) is not None
 
 
 def _verify(judge, response):
@@ -748,9 +760,7 @@ def live_suite(workspace, directory, scenarios=SCENARIOS, *, model=None, abort=N
             raise
 
     def publish(pack, proof):
-        folder = (research_games.DATABASE.parent if pack in research_games.PACKS else
-                  "方格子容纳" if pack.startswith("square-") else "四境驿站")
-        return LocalJudge(workspace / folder, pack).store.ingest(proof, improvement_only=True) is not None
+        return publish_record(workspace, pack, proof)
 
     return _run_suite(workspace, directory, scenarios, infer, seconds=window_seconds, live=True,
                       abort=abort if abort is not None else Event(), publish=publish,
