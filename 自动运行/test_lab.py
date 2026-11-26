@@ -539,7 +539,7 @@ class LabTests(unittest.TestCase):
                     with post("resume") as response:
                         self.assertEqual(response.status, 202)
                     server.task.result(timeout=5)
-                    self.assertEqual(resume.call_args.args[1], incomplete)
+                    self.assertEqual(resume.call_args.args[1].resolve(), incomplete.resolve())
                     self.assertTrue(resume.call_args.kwargs["resume"])
             self.assertTrue((data / "方格子容纳" / "packing.sqlite3").is_file())
             self.assertTrue((data / "四境驿站" / "relay.sqlite3").is_file())

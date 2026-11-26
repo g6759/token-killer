@@ -248,10 +248,12 @@ class GameIntegrationTests(unittest.TestCase):
 
     def test_official_stdio_reaches_both_real_judges(self):
         root = HERE.parent
-        relay_example = json.loads((root / "四境驿站/examples/七站全谱.json").read_text(encoding="utf-8"))
+        # The seven translates of a cyclic difference set cover every pair exactly once.
+        relay_solution = {"blocks": [sorted(1 + (start + delta) % 7 for delta in (0, 1, 3))
+                                     for start in range(7)]}
         packing_example = json.loads((root / "方格子容纳/reference_layouts.json").read_text(encoding="utf-8"))
         games = [
-            ("relay", "relay-7", root / "四境驿站/solo_server.py", relay_example["chain"][-1]["solution"]),
+            ("relay", "relay-7", root / "四境驿站/solo_server.py", relay_solution),
             ("packing", "square-18", root / "方格子容纳/game.py", packing_example["square-18"]["finer"]),
         ]
         with tempfile.TemporaryDirectory() as registry, ExitStack() as children:

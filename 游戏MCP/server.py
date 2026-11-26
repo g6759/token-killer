@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import shutil
 import site
 import subprocess
@@ -189,11 +190,13 @@ def start_service(pack_id: Pack) -> Endpoint:
         locations = [HERE, registry, data_dir, Path(tempfile.gettempdir())]
         if os.name == "nt":
             locations.append(Path(os.environ["SystemRoot"]))
-        if any(shutil.disk_usage(directory).free < 20 * 1024**3 for directory in locations):
-            raise ValueError("任务相关磁盘可用空间低于 20 GiB，已停止启动游戏。")
+        if any(shutil.disk_usage(directory).free < 10 * 1024**3 for directory in locations):
+            raise ValueError("任务相关磁盘可用空间低于 10 GiB，已停止启动游戏。")
         command = [sys.executable, "-B", "-X", "utf8", str(script), "--port", "0",
                    "--db", str((data_dir / (family + ".sqlite3")).resolve())]
-        child_env = dict(os.environ, GAME_MCP_REGISTRY=str(registry))
+        # A Windows venv launcher can start the Python server under a different PID.
+        launch_instance = secrets.token_hex(16)
+        child_env = dict(os.environ, GAME_MCP_REGISTRY=str(registry), GAME_MCP_LAUNCH_INSTANCE=launch_instance)
         with (registry / (family + ".log")).open("ab") as log:
             child = subprocess.Popen(command, cwd=script.parent, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
                                      env=child_env,
@@ -204,7 +207,7 @@ def start_service(pack_id: Pack) -> Endpoint:
             while child.poll() is None and time.monotonic() < deadline:
                 try:
                     endpoint = verified_endpoint(pack_id)
-                    if endpoint.pid == child.pid:
+                    if endpoint.instance == launch_instance:
                         return endpoint
                 except Offline:
                     pass

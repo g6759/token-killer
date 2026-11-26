@@ -62,8 +62,8 @@ def _disk(path):
     locations = [path.parent, ROOT, Path(tempfile.gettempdir())]
     if os.name == "nt":
         locations.append(Path(os.environ["SystemRoot"]))
-    if any(shutil.disk_usage(item).free < 20 * 1024**3 for item in locations):
-        raise ValueError("可用磁盘空间低于 20 GiB，本局已暂停。")
+    if any(shutil.disk_usage(item).free < 10 * 1024**3 for item in locations):
+        raise ValueError("可用磁盘空间低于 10 GiB，本局已暂停。")
 
 
 @contextmanager

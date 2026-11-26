@@ -194,12 +194,16 @@ def collect_run(folder):
             and plan["packs"].get(scenarios[0]) == [scenarios[0]]
             and set(saved["scenarios"]) == {scenarios[0]}):
         name = scenarios[0]
+        window_summary = saved["scenarios"][name]
+        if (window_summary.get("live") is not True or window_summary.get("stop") != "window"
+                or window_summary.get("errors")):
+            raise ValueError(f"{name} 含错误或未形成完整窗口。")
         profile = {field: plan["profile"][field] for field in ("model", "effort")}
         proof = {"format": FORMAT, "profile": profile, "seconds": seconds, "scenario": name,
                  "baselines": {pack: {"solution": _verify_chain(bundle, _rules)[-1]["solution"]}
                                for pack, bundle in baselines.items()},
                  "single_window": _collect_window(folder / name, plan["packs"][name],
-                                                   saved["scenarios"][name], baselines, seconds,
+                                                   window_summary, baselines, seconds,
                                                    profile, token_bytes(32), comparison=False)}
         verify(proof)
         return proof

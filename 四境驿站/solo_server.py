@@ -5,6 +5,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import sys
@@ -345,7 +346,8 @@ class SoloServer(ThreadingHTTPServer):
             self.server_close()
             raise
         self.submit_lock = Lock()
-        self.instance = secrets.token_hex(16)
+        launched = os.environ.get("GAME_MCP_LAUNCH_INSTANCE", "")
+        self.instance = launched if re.fullmatch("[0-9a-f]{32}", launched) else secrets.token_hex(16)
         self.missions = MissionBook()
         self.jobs = GameJobs(self)
         host, actual_port = self.server_address

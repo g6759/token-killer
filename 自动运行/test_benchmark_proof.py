@@ -47,7 +47,7 @@ class BenchmarkProofTests(unittest.TestCase):
                    "model_overlap_seconds": 0.0}
         save(folder / "summary.json", summary)
 
-    def test_series_recounts_existing_consecutive_windows_and_includes_gap(self):
+    def test_series_recounts_two_windows_and_includes_gap(self):
         with TemporaryDirectory() as scratch:
             root = Path(scratch)
             judge = LocalJudge(root / "seed", "cap-set")
@@ -101,7 +101,8 @@ class BenchmarkProofTests(unittest.TestCase):
             first_summary = {**benchmark.metrics([first_row, second_row], 600, live=True),
                              **{key: first_row_value for key, first_row_value in
                                 json.loads((first / "summary.json").read_text(encoding="utf-8")).items()
-                                if key not in benchmark_proof.MEASUREMENTS}}
+                                if key not in benchmark_proof.MEASUREMENTS},
+                             "model_overlap_seconds": 0.0}
             save(first / "summary.json", first_summary)
 
             with self.assertRaisesRegex(ValueError, "回包指纹缺失或重复"):
