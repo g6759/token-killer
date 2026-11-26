@@ -42,6 +42,10 @@ const [pw, browserPath, origin] = process.argv.slice(1);
     const chosen = page.getByRole('button', {name: '停止 50 块方格', exact: true});
     await page.waitForFunction(() => document.querySelectorAll('#batchRows article[data-status="running"]').length === 3);
     await page.waitForFunction(() => document.querySelector('#batchUsage').textContent.includes('111'));
+    await page.waitForFunction(async () => {
+      const {batch} = await (await fetch('/api/packing/batch')).json();
+      return batch.rows.some(row => row.n === 50 && row.total_checked > 0);
+    }, undefined, {polling: 100});
     const stopResponse = page.waitForResponse(r => r.url().endsWith('/batch/stop') && r.request().method() === 'POST');
     await chosen.click();
     const stopped = (await (await stopResponse).json()).batch;
