@@ -111,12 +111,76 @@ class LaneConnectionError(RuntimeError):
     """An unconfirmed transport failure requires a cutoff check."""
 
 
+class TargetReached(RuntimeError):
+    """The session target forbids a new dispatch; existing replies still settle."""
+
+
+def effective_usage(reply):
+    usage = reply.get("usage")
+    if (not isinstance(usage, dict)
+            or any(type(usage.get(key)) is not int or usage[key] < 0 for key in USAGE_FIELDS)
+            or usage["cached_input_tokens"] > usage["input_tokens"]):
+        return None
+    return usage["input_tokens"] - usage["cached_input_tokens"] + usage["output_tokens"]
+
+
+class SessionMeter:
+    """Thread-safe, receipt-ID deduplicated meter shared across session windows."""
+    def __init__(self, target_tokens=None, *, started_at=None):
+        if target_tokens is not None and (type(target_tokens) is not int or not 1 <= target_tokens < 2**53):
+            raise ValueError("Token 目标须为 1 至 9007199254740991 的整数。")
+        self.target_tokens = target_tokens
+        self.started_at = time() if started_at is None else started_at
+        self.lock = Lock()
+        self.reached = Event()
+        self.receipts = {}
+        self.total = 0
+
+    def add(self, reply, *, received_at=None):
+        amount = effective_usage(reply)
+        identity = reply.get("response_id")
+        if amount is None or not isinstance(identity, str) or not identity:
+            return
+        with self.lock:
+            if identity in self.receipts:
+                return
+            self.receipts[identity] = (time() if received_at is None else received_at, amount)
+            self.total += amount
+            if self.target_tokens is not None and self.total >= self.target_tokens:
+                self.reached.set()
+
+    def dispatch(self, mark_sent):
+        if self.target_tokens is None:
+            mark_sent()
+            return
+        with self.lock:
+            if self.reached.is_set():
+                raise TargetReached("Token target reached before dispatch.")
+            mark_sent()
+
+    def snapshot(self, *, at=None):
+        at = time() if at is None else at
+        with self.lock:
+            total = self.total
+            seconds = max(0.001, min(60, at - self.started_at))
+            recent = sum(amount for stamp, amount in self.receipts.values() if at - seconds < stamp <= at)
+            return {"target_tokens": self.target_tokens, "target_reached": self.reached.is_set(),
+                    "target_progress": min(1, total / self.target_tokens) if self.target_tokens else None,
+                    "effective_tokens": total, "metered_rounds": len(self.receipts),
+                    "recent_tokens_per_minute": round(recent * 60 / seconds, 2) if self.receipts else None,
+                    "recent_window_seconds": seconds, "started_at": self.started_at}
+
+
 def metrics(records, seconds, *, live):
     """Normalize aggregate counters by one shared window, including idle time."""
     candidates = {(r["pack"], r["key"]) for r in records if r.get("key")}
     totals = {key: 0 for key in (*USAGE_FIELDS, "total_tokens")}
     measured = 0
+    seen = set()
     for record in records:
+        identity = record.get("response_id")
+        if identity and identity in seen:
+            continue
         usage = record.get("usage")
         if not isinstance(usage, dict):
             continue
@@ -124,6 +188,8 @@ def metrics(records, seconds, *, live):
             continue
         if usage["cached_input_tokens"] > usage["input_tokens"]:
             continue
+        if identity:
+            seen.add(identity)
         measured += 1
         for key in USAGE_FIELDS:
             totals[key] += usage[key]
@@ -224,7 +290,7 @@ def _overlap_seconds(records, *, minimum=2):
 
 
 def _run_lane(lane, judge, seed, direction, infer, start, seconds, live, max_turns, abort, publish, relay_targets,
-              frontier_count, builders, deck=None, counter=None):
+              frontier_count, builders, deck=None, counter=None, session_meter=None):
     records = []
     feedback = ""
     error = None
@@ -245,6 +311,8 @@ def _run_lane(lane, judge, seed, direction, infer, start, seconds, live, max_tur
         if abort.wait(max(0.0, start + min(delay, seconds) - monotonic())) or monotonic() >= start + seconds:
             return records, error
     while not abort.is_set() and (max_turns is None or len(records) < max_turns):
+        if session_meter is not None and session_meter.reached.is_set():
+            break
         if monotonic() >= disk_check:
             check_disk(lane)
             disk_check = monotonic() + 45
@@ -306,8 +374,13 @@ def _run_lane(lane, judge, seed, direction, infer, start, seconds, live, max_tur
         journal = {"request": recorded_request, "state": "prepared", "at": now()}
 
         def mark_sent():
-            journal.update(state="possibly-sent", at=now())
-            save(pending, journal)
+            def record_sent():
+                journal.update(state="possibly-sent", at=now())
+                save(pending, journal)
+            if session_meter is not None:
+                session_meter.dispatch(record_sent)
+            else:
+                record_sent()
 
         try:
             if live:
@@ -320,6 +393,9 @@ def _run_lane(lane, judge, seed, direction, infer, start, seconds, live, max_tur
                 reply = infer(request, seconds - elapsed_at_dispatch, abort, on_sent=mark_sent)
             else:
                 reply = infer(request, start + seconds - started_at, abort)
+        except TargetReached:
+            pending.unlink(missing_ok=True)
+            break
         except (OSError, RuntimeError, ValueError) as exc:
             failed_at = monotonic() - start
             if abort.is_set():
@@ -340,6 +416,8 @@ def _run_lane(lane, judge, seed, direction, infer, start, seconds, live, max_tur
         if live:
             journal.update(state="received", reply=reply, received_elapsed=received_at - start, at=now())
             save(pending, journal)
+        if session_meter is not None and received_at <= start + seconds:
+            session_meter.add(reply)
         found = None
         search_ended = received_at
         try:
@@ -413,7 +491,7 @@ def _run_lane(lane, judge, seed, direction, infer, start, seconds, live, max_tur
 
 
 def run_window(directory, packs, baselines, infer, *, seconds=LIVE_WINDOW_SECONDS, live, max_turns=None, abort=None,
-               publish=None, relay_targets=1, frontier_count=0, deck=None, sampled_usage=None):
+               publish=None, relay_targets=1, frontier_count=0, deck=None, sampled_usage=None, session_meter=None):
     if seconds <= 0 or not 1 <= len(packs) <= MAX_LANES or (live and max_turns is not None):
         raise ValueError(f"对照须配置正时长及 1 至 {MAX_LANES} 条游戏会话。")
     directory.mkdir(parents=True, exist_ok=False)
@@ -448,12 +526,13 @@ def run_window(directory, packs, baselines, infer, *, seconds=LIVE_WINDOW_SECOND
             builders = stack.enter_context(ProcessPoolExecutor(max_workers=workers))
         pool = stack.enter_context(ThreadPoolExecutor(max_workers=len(lanes)))
         futures = [pool.submit(_run_lane, *lane, infer, start, seconds, live, max_turns, abort, publish, relay_targets,
-                               frontier_count, builders, deck, counter)
+                               frontier_count, builders, deck, counter, session_meter)
                    for lane in lanes]
         outcomes = [future.result() for future in futures]
     errors = [error for _, error in outcomes if error]
     all_lanes_interrupted = len(errors) == len(lanes)
-    while live and not abort.is_set() and not all_lanes_interrupted and monotonic() < start + seconds:
+    while (live and not abort.is_set() and not all_lanes_interrupted and monotonic() < start + seconds
+           and not (session_meter is not None and session_meter.reached.is_set())):
         check_disk(directory)
         abort.wait(min(45, max(0, start + seconds - monotonic())))
     elapsed = monotonic() - start
@@ -463,6 +542,8 @@ def run_window(directory, packs, baselines, infer, *, seconds=LIVE_WINDOW_SECOND
         stop = "error"
     elif abort.is_set():
         stop = "stopped"
+    elif session_meter is not None and session_meter.reached.is_set():
+        stop = "target"
     elif max_turns is not None:
         stop = "round-limit"
     models = sorted({r["model"] for r in records if r["model"]})
@@ -527,7 +608,7 @@ def _archive_attempt(directory, name):
 
 
 def _run_suite(workspace, directory, scenarios, infer, *, seconds, live, max_turns=None,
-               abort=None, publish=None, resume=False, profile=None, weekly_snapshot=None, deck=None):
+               abort=None, publish=None, resume=False, profile=None, weekly_snapshot=None, deck=None, session_meter=None):
     directory = directory.resolve()
     if any(name not in WINDOWS for name in scenarios):
         raise ValueError("对照场景不在支持列表内。")
@@ -587,7 +668,7 @@ def _run_suite(workspace, directory, scenarios, infer, *, seconds, live, max_tur
                                     live=live, max_turns=max_turns, abort=abort, publish=publish,
                                     relay_targets=2 if name == DUAL_RELAY_MODE else 1,
                                     frontier_count=FRONTIER_WINDOWS.get(name, (0, 0))[1], deck=deck,
-                                    sampled_usage=sampled_usage)
+                                    sampled_usage=sampled_usage, session_meter=session_meter)
             finally:
                 if weekly_snapshot:
                     with quota_lock:
@@ -677,16 +758,24 @@ def current_progress(directory, *, receipts_cache=None):
                                               if last.get("provider_started") is not None else None),
                           **metrics(records, elapsed, live=window["live"])})
         combined = metrics(all_records, elapsed, live=window["live"])
+        recent_meter = SessionMeter(started_at=window["started_at"])
+        for record in all_records:
+            received = record.get("received")
+            if type(received) in (int, float):
+                recent_meter.add(record, received_at=window["started_at"] + received)
+        recent = recent_meter.snapshot()
         projected = (round(combined["tokens_per_minute"] * window["seconds"] / 60)
                      if combined["metered_rounds"] >= 2 else None)
         return {"scenario": name, "remaining_seconds": round(max(0, window["seconds"] - elapsed)),
                 "window_seconds": window["seconds"], "projected_tokens": projected, "lanes": lanes,
-                "floors": floors + combined["project_records"], **combined}
+                "floors": floors + combined["project_records"], **combined,
+                "recent_tokens_per_minute": recent["recent_tokens_per_minute"],
+                "recent_window_seconds": recent["recent_window_seconds"]}
     return None
 
 
 def live_suite(workspace, directory, scenarios=SCENARIOS, *, model=None, abort=None, resume=False,
-               window_seconds=LIVE_WINDOW_SECONDS, deck=None, before_infer=None):
+               window_seconds=LIVE_WINDOW_SECONDS, deck=None, before_infer=None, session_meter=None):
     from subscription_worker import (DriverError, PreflightError, ResponseConnectionError, ResponseStreamEnded,
                                      SubscriptionDriver, peek_setup_status)
 
@@ -764,7 +853,7 @@ def live_suite(workspace, directory, scenarios=SCENARIOS, *, model=None, abort=N
 
     return _run_suite(workspace, directory, scenarios, infer, seconds=window_seconds, live=True,
                       abort=abort if abort is not None else Event(), publish=publish,
-                      resume=resume, profile=profile, deck=deck,
+                      resume=resume, profile=profile, deck=deck, session_meter=session_meter,
                       weekly_snapshot=lambda: weekly_meter.collect(app_weekly_limit_percent=setup.get("weekly_limit_percent")))
 
 

@@ -7,6 +7,23 @@ from workspace_io import save
 
 
 class ContinuousHistoryTests(unittest.TestCase):
+    def test_target_recovery_deduplicates_across_windows_and_retains_partial_completion(self):
+        with TemporaryDirectory() as scratch:
+            results = Path(scratch)
+            folders = [results / ("吞吐对照-混合冲榜-20261123-010000-00000" + str(i)) for i in (1, 2)]
+            for folder in folders:
+                group = folder / "single"
+                (group / "lane-1").mkdir(parents=True)
+                save(group / "window.json", {"live": True, "seconds": 600, "started_at": 100})
+                save(group / "lane-1" / "0001.json", {"in_window": True, "response_id": "same",
+                     "received": 10, "usage": {"input_tokens": 100, "cached_input_tokens": 0, "output_tokens": 0}})
+            write_history(new_history_path(results), "single", 3, folders, target_tokens=150, started_at=100)
+            state = latest_history(results)
+            self.assertEqual(state["effective_tokens"], 100)
+            self.assertFalse(state["target_reached"])
+            self.assertEqual(state["target_tokens"], 150)
+            self.assertEqual(state["completed"], 0)
+
     def test_recovery_counts_timestamped_pending_once_and_uses_written_window_summary(self):
         with TemporaryDirectory() as scratch:
             results = Path(scratch)

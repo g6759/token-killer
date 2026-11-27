@@ -28,8 +28,13 @@
         <div class="console-body">
           <div class="console-control">
             <div class="console-choices">
+              <label><span id="client-label">执行客户端</span><select id="run-client">
+                <option value="openai">OpenAI · ChatGPT</option><option value="codex-mcp">OpenAI · Codex MCP</option>
+                <option value="claude-code">Claude Code</option><option value="antigravity">Google Antigravity</option>
+              </select></label>
               <label><span id="scenario-label">玩法</span><select id="run-scenario"></select></label>
               <label><span id="duration-label">运行时长</span><select id="run-duration"></select></label>
+              <label><span id="target-label">有效 token 目标（可选）</span><input id="run-target" type="number" min="1" max="9007199254740991" step="1" inputmode="numeric" placeholder="—"></label>
             </div>
             <p id="run-description"></p>
             <div class="console-actions">
@@ -39,16 +44,25 @@
             </div>
             <p id="run-notice" role="status" aria-live="polite"></p>
           </div>
-          <div class="console-quota">
+          <div class="console-quota" id="native-quota">
             <div class="quota-heading"><h3 id="allowance-title">套餐余量</h3><button type="button" class="text-button" id="refresh-allowance">刷新</button></div>
             <div id="allowance-windows"></div><p id="allowance-detail"></p>
           </div>
+          <div class="console-quota" id="client-setup" hidden>
+            <h3 id="client-guide-title">连接客户端</h3><p id="client-guide-note"></p>
+            <a href="/client-guide" target="_blank" rel="noopener" id="client-guide-link">查看 MCP 配置</a>
+            <button id="copy-config" class="secondary" type="button">复制本机配置</button>
+            <textarea id="config-fallback" rows="4" readonly hidden aria-label="MCP configuration"></textarea>
+            <div id="handoff-box" hidden><textarea id="handoff-text" rows="3" readonly aria-label="MCP handoff"></textarea>
+              <button id="copy-handoff" class="secondary" type="button">复制接手指令</button></div>
+          </div>
         </div>
         <dl class="console-totals">
-          <div><dt id="speed-label">有效 token / 分钟</dt><dd id="console-speed">—</dd></div>
+          <div><dt id="speed-label">最近 60 秒 · 有效 token / 分钟</dt><dd id="console-speed">—</dd></div>
           <div><dt id="total-label">本场累计有效 token</dt><dd id="console-total">—</dd></div>
           <div><dt id="time-label">当前窗口剩余</dt><dd id="console-time">—</dd></div>
         </dl>
+        <div class="session-progress"><label for="run-progress" id="goal-progress">目标进度</label><progress id="run-progress" max="100" value="0"></progress></div>
         <p class="console-foot" id="receipt-note"></p>
       </div>
       <div id="setup-slot"></div>

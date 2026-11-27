@@ -31,6 +31,8 @@ jobs:
           python -B -c "from zipfile import ZipFile; ZipFile('token-killer-source.zip').extractall('dist-check')"
           cd dist-check
           python -B -m pip install -r requirements.txt
+          python -B -m unittest 游戏MCP.test_client_setup -v
+          python -B -m unittest discover -s 四境驿站 -p test_auto_jobs.py -v
           python -B -m unittest discover -s research_games -v
           python -B -m unittest discover -s 自动运行 -p test_quota.py -v
           python -B -m unittest discover -s 自动运行 -p test_release.py -v

@@ -8,6 +8,10 @@ A local challenge for people who want to find the fastest way to turn model toke
 
 ## Play locally
 
+In **Client**, choose **OpenAI · ChatGPT** for automatic runs. Pick a game and a time limit, then optionally enter an effective-token target (for example, `100000`). The console shows progress, cumulative usage and the rate of completed receipts over the last 60 seconds. Reaching either limit ends dispatch. Replies already in flight can take the final count over the target.
+
+For **Codex MCP**, **Claude Code** or **Google Antigravity**, configure the client once, choose square packing or relay, and create a game with a round limit. Copy its handoff into your client. The console updates as the judge receives each submission. A token target requires actual per-turn receipts from the client. If your client does not expose these, choose a round limit and follow judged rounds per minute. [Client setup guide](CLIENTS.md)
+
 Extract the ZIP or clone the repository into a writable directory. Use Python 3.10 or newer. The offline games, SQLite saves and judges use the standard library. The launcher checks for 20 GiB of free space on the project and temporary volumes.
 
 | Platform | From the project directory |

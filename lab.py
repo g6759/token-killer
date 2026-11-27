@@ -17,9 +17,9 @@ from urllib.parse import parse_qs, urlsplit
 ROOT = Path(__file__).resolve().parent
 sys.path[:0] = [str(ROOT / folder) for folder in ("四境驿站", "方格子容纳", "自动运行")]
 
-from auto_jobs import publish_origin
+from auto_jobs import MCP_CLIENTS, publish_origin
 from benchmark import (LIVE_WINDOW_SECONDS, PLANS, PORTFOLIO_SQUARES, SCENARIOS, WINDOWS,
-                       current_progress, live_suite, replay_suite, resumable_run)
+                       SessionMeter, current_progress, live_suite, replay_suite, resumable_run)
 from continuous_history import latest_history, new_history_path, window_rate, write_history
 from scoreboard import collect as collect_scores, packing_case_progress, page as score_page
 from solo_server import RequestError, SoloHandler, SoloServer
@@ -28,6 +28,7 @@ from workspace_io import check_disk
 from quota import MAX_AGE_SECONDS, QuotaError, QuotaGate, get_shared_gate, read_allowance
 from 方格子容纳.game import PackingServer
 import research_games
+from 游戏MCP.setup_mcp import configs as mcp_configs
 
 
 GAMES = {
@@ -91,7 +92,9 @@ def _visible_game(origin, game):
         if isinstance(lineage, list) and lineage:
             value["records"] = len(lineage) - 1
         job = _load_game(origin, f"/api/auto?pack={pack}")
-        value["job"] = {key: job.get(key) for key in ("status", "stage", "rounds", "completed")}
+        value["job"] = {key: job.get(key) for key in (
+            "id", "status", "mode", "stage", "rounds", "completed", "work", "elapsed_seconds",
+            "client", "target_tokens", "end_reason", "metered_rounds", "effective_tokens", "recent_tokens_per_minute")}
     except (HTTPException, OSError, TypeError, KeyError, ValueError):
         pass
     return value
@@ -175,6 +178,36 @@ def _latest_weekly_meter(results):
 
 
 class LabHandler(SoloHandler):
+    def _mcp_run(self, stop=False):
+        body = self._read_body()
+        required = {"game", "id"} if stop else {"game", "client", "rounds", "request_id"}
+        allowed = required if stop else required | {"target_tokens"}
+        if not isinstance(body, dict) or not required <= body.keys() <= allowed or body["game"] not in tuple(GAMES):
+            raise ValueError("Invalid MCP run / 对局参数无效")
+        game = body["game"]
+        if stop:
+            active = _load_game(self.server.origins[game], "/api/auto?pack=" + GAMES[game][2])
+            if not active.get("client") or active.get("id") != body["id"]:
+                raise ValueError("This client run has changed / 当前客户端对局已变更")
+            payload = {"id": body["id"]}
+        else:
+            if body["client"] not in tuple(MCP_CLIENTS):
+                raise ValueError("Invalid client / 客户端无效")
+            payload = {key: value for key, value in body.items() if key != "game"}
+            payload["mode"] = "mcp"
+        payload["pack_id"] = GAMES[game][2]
+        origin = self.server.origins[game]
+        conn = HTTPConnection(urlsplit(origin).netloc, timeout=5)
+        try:
+            conn.request("POST", "/api/auto/" + ("stop" if stop else "start"), json.dumps(payload),
+                         headers={"Origin": origin, "Content-Type": "application/json"})
+            with conn.getresponse() as reply:
+                self._json(reply.status, json.loads(reply.read(2 * 1024**2)))
+        except (HTTPException, OSError) as exc:
+            raise ValueError("Local game unavailable / 本机游戏暂时无法连接") from exc
+        finally:
+            conn.close()
+
     def _get(self):
         self._check_origin()
         target = self._target()
@@ -211,6 +244,17 @@ class LabHandler(SoloHandler):
         if path == "/api/lab":
             self._json(200, self.server.state())
             return
+        if path == "/client-guide":
+            self._send(200, (ROOT / "CLIENTS.md").read_bytes(), "text/plain; charset=utf-8")
+            return
+        if path == "/api/lab/mcp-config":
+            names = {"codex-mcp": "codex.config.toml", "claude-code": "claude-code.mcp.json",
+                     "antigravity": "antigravity.mcp_config.json"}
+            requested = parse_qs(target.query).get("client", [])
+            if len(requested) != 1 or requested[0] not in names:
+                raise ValueError("Unknown MCP client / 客户端无效")
+            self._json(200, {"config": mcp_configs(ROOT, sys.executable)[names[requested[0]]]})
+            return
         if path in {"/scores", "/leaderboard.json"}:
             proof = collect_scores(self.server.data)
             if path == "/scores":
@@ -235,6 +279,9 @@ class LabHandler(SoloHandler):
     def _post(self):
         self._check_origin(required=True)
         target = self._target()
+        if target.path in {"/api/lab/mcp-start", "/api/lab/mcp-stop"} and not target.query:
+            self._mcp_run(stop=target.path.endswith("/mcp-stop"))
+            return
         if target.path == "/api/lab/quota" and not target.query:
             if self._read_body() != {}:
                 raise ValueError("额度刷新不接受参数。 / Quota refresh expects an empty object.")
@@ -243,10 +290,10 @@ class LabHandler(SoloHandler):
         if target.path == "/api/lab/session" and not target.query:
             payload = self._read_body()
             if (not isinstance(payload, dict) or "scenario" not in payload
-                    or set(payload) - {"scenario", "windows"}):
+                    or set(payload) - {"scenario", "windows", "target_tokens"}):
                 raise ValueError("请选择玩法和窗口数。 / Choose a scenario and window count.")
             self._json(202, self.server.start("session", scenario=payload["scenario"],
-                                              windows=payload.get("windows", 1)))
+                                              windows=payload.get("windows", 1), target_tokens=payload.get("target_tokens")))
             return
         if target.path in {"/api/research/check", "/api/research/submit", "/api/research/benchmark"} and not target.query:
             payload = self._read_body()
@@ -343,6 +390,7 @@ class LabServer(ThreadingHTTPServer):
         self.continuous = latest_history(self.results)
         self.continuous_archive = None
         self.continuous_windows = []
+        self.session_meter = None
         self.progress_receipts = {}
         self.abort = Event()
         self.quota = get_shared_gate()
@@ -440,6 +488,13 @@ class LabServer(ThreadingHTTPServer):
                 continuous["effective_tokens"] += measured["uncached_input_tokens"] + measured["output_tokens"]
                 continuous["metered_rounds"] += measured["metered_rounds"]
                 continuous["new_records"] += measured.get("project_records", 0)
+        if continuous is not None and self.session_meter is not None:
+            metering = self.session_meter.snapshot()
+            if metering["metered_rounds"] or metering["target_tokens"] is not None:
+                continuous.update(metering)
+            else:
+                continuous.update({key: value for key, value in metering.items()
+                                   if key not in {"effective_tokens", "metered_rounds"}})
         return {"games": {name: _visible_game(origin, name) for name, origin in self.origins.items()},
                 "benchmark": benchmark, "mixed_run": mixed, "progress": progress,
                 "continuous": continuous,
@@ -473,7 +528,7 @@ class LabServer(ThreadingHTTPServer):
                 abort.set()
             raise
 
-    def _guarded_live_suite(self, directory, scenarios, *, abort, resume=False):
+    def _guarded_live_suite(self, directory, scenarios, *, abort, resume=False, session_meter=None):
         """One shared gate and one watcher protect every lane in this window."""
         self._require_quota(abort, force=True)
         finished = Event()
@@ -501,6 +556,8 @@ class LabServer(ThreadingHTTPServer):
         watcher.start()
         try:
             options = {"abort": abort, "before_infer": before_infer}
+            if session_meter is not None:
+                options["session_meter"] = session_meter
             if resume:
                 options["resume"] = True
             return live_suite(self.data, directory, scenarios, **options)
@@ -521,7 +578,8 @@ class LabServer(ThreadingHTTPServer):
     def _save_continuous(self):
         session = self.continuous
         write_history(self.continuous_archive, session["scenario"], session["window_limit"], self.continuous_windows,
-                      end_reason=session["end_reason"], message=session["message"])
+                      end_reason=session["end_reason"], message=session["message"],
+                      target_tokens=session.get("target_tokens"), started_at=session.get("started_at"))
 
     def _run_continuous(self, scenario, abort, windows):
         scenarios = {scenario: WINDOWS[scenario]}
@@ -544,7 +602,7 @@ class LabServer(ThreadingHTTPServer):
                 self.continuous_windows.append(directory)
                 self._save_continuous()
             try:
-                report = self._guarded_live_suite(directory, scenarios, abort=abort)
+                report = self._guarded_live_suite(directory, scenarios, abort=abort, session_meter=self.session_meter)
             except QuotaError as exc:
                 with self.lock:
                     self.task_dir = None
@@ -560,6 +618,10 @@ class LabServer(ThreadingHTTPServer):
                 session = self.continuous
                 session["effective_tokens"] += entry.get("uncached_input_tokens", 0) + entry.get("output_tokens", 0)
                 session["metered_rounds"] += metered
+                if self.session_meter is not None:
+                    snapshot = self.session_meter.snapshot()
+                    if snapshot["metered_rounds"] or snapshot["target_tokens"] is not None:
+                        session.update(snapshot)
                 if metered:
                     session["last_window_rate"] = window_rate(entry)
                 session["new_records"] += entry.get("project_records", 0)
@@ -571,6 +633,10 @@ class LabServer(ThreadingHTTPServer):
                     return
                 if errors:
                     session.update(end_reason="interrupted", message=errors[0])
+                    self._save_continuous()
+                    return
+                if self.session_meter is not None and self.session_meter.reached.is_set():
+                    session["end_reason"] = "target"
                     self._save_continuous()
                     return
                 if abort.is_set() or report["stopped"]:
@@ -587,11 +653,12 @@ class LabServer(ThreadingHTTPServer):
             self.continuous["end_reason"] = "stopped"
             self._save_continuous()
 
-    def start(self, mode, *, windows=None, scenario=None):
+    def start(self, mode, *, windows=None, scenario=None, target_tokens=None):
         with self.lock:
             if self.task is not None and not self.task.done():
                 raise RequestError(409, "已有对照正在运行。")
             if mode in {"continuous", "session"}:
+                meter = SessionMeter(target_tokens)
                 windows = 1 if windows is None else windows
                 if type(windows) is not int or not 1 <= windows <= MAX_SESSION_WINDOWS:
                     raise ValueError("窗口数须为 1 至 12 的整数。 / Windows must be an integer from 1 to 12.")
@@ -609,15 +676,16 @@ class LabServer(ThreadingHTTPServer):
             self.protection_reason = None
             if mode in {"continuous", "session"}:
                 self.abort = Event()
+                self.session_meter = meter = SessionMeter(target_tokens)
                 self.task_dir = None
                 self.continuous = {"scenario": scenario, "window_limit": windows, "window": 0,
                                    "completed": 0, "effective_tokens": 0, "metered_rounds": 0,
-                                   "new_records": 0, "end_reason": None, "message": None}
+                                   "new_records": 0, "end_reason": None, "message": None, **meter.snapshot()}
                 self.continuous_archive = new_history_path(self.results)
                 self.continuous_windows = []
                 self._save_continuous()
                 self.task = self.pool.submit(self._run_continuous, scenario, self.abort, windows)
-                return {"run": "running", "scenario": scenario, "windows": windows}
+                return {"run": "running", "scenario": scenario, "windows": windows, "target_tokens": target_tokens}
             if mode == "resume":
                 self.task_dir = resumable_run(self.results)
                 if self.task_dir is None:
@@ -629,6 +697,7 @@ class LabServer(ThreadingHTTPServer):
                     title = {"live": "实跑", "replay": "离线演练"}.get(mode, "混合冲榜")
                 self.task_dir = self._run_directory(title)
             self.continuous = None
+            self.session_meter = None
             self.progress_receipts = {}
             self.abort = Event()
             if mode != "replay":

@@ -12,7 +12,7 @@ LAB_UI = ("index.html", "lab.css", "lab.js", "console.js", "research.html", "res
 RESEARCH = ("__init__.py", "discrete.py", "lorenz.py")
 
 SOURCE = {
-    "": ("lab.py", "scoreboard.py", "benchmark_proof.py", "release.py", "README.md", ".gitignore", "requirements.txt",
+    "": ("lab.py", "scoreboard.py", "benchmark_proof.py", "release.py", "README.md", "CLIENTS.md", ".gitignore", "requirements.txt",
          "mcp.config.example.toml", "启动解题实验室.cmd", "启动方格子容纳.cmd", "启动四镜驿站.cmd"),
     "实验室": LAB_UI,
     "research_games": RESEARCH,
@@ -24,7 +24,7 @@ SOURCE = {
                 "reference_layouts.json", "reference_sync.py"),
     "自动运行": ("benchmark.py", "continuous_history.py", "evidence.py", "guided_search.py", "relay_frontier.py",
              "prepared_frontiers.py", "square_frontier.py", "weekly_meter.py", "quota.py", "workspace_io.py", "本地裁判.py"),
-    "游戏MCP": ("autoplay.py", "requirements.txt", "server.py"),
+    "游戏MCP": ("autoplay.py", "requirements.txt", "server.py", "setup_mcp.py"),
     "微观生命海": ("subscription.py",),
     "public": ("index.html", "leaderboard.json", "verifier.zip"),
 }
@@ -40,7 +40,7 @@ VERIFIER = {
 # git status, or the existing proof bundle: those may contain personal results.
 SOURCE_ONLY = {
     "": ("lab.py", "scoreboard.py", "benchmark_proof.py", "release.py",
-         "README.md", "README.en.md", "CONTRIBUTING.md", ".gitignore", "requirements.txt",
+         "README.md", "README.en.md", "CONTRIBUTING.md", "CLIENTS.md", ".gitignore", "requirements.txt",
          "mcp.config.example.toml", "start.sh", "启动解题实验室.cmd",
          "启动方格子容纳.cmd", "启动四镜驿站.cmd"),
     "实验室": LAB_UI,
@@ -63,7 +63,7 @@ SOURCE_ONLY = {
              "test_driver.py", "test_evidence.py", "test_judge.py", "test_lab.py",
              "test_prepared_frontiers.py", "test_queue.py", "test_relay_frontier.py",
              "test_release.py", "test_scoreboard.py", "test_square_frontier.py", "test_weekly_meter.py"),
-    "游戏MCP": ("autoplay.py", "requirements.txt", "server.py", "test_protocol.py",
+    "游戏MCP": ("autoplay.py", "requirements.txt", "server.py", "setup_mcp.py", "test_client_setup.py", "test_protocol.py",
                "test_packing_lite_web.py", "test_packing_batch_web.py", "test_web_codex.py"),
     "微观生命海": ("subscription.py", "test_subscription.py"),
     ".github/ISSUE_TEMPLATE": ("throughput-method.yml",),

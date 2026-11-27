@@ -11,6 +11,34 @@ from solo_server import SoloServer
 
 
 class AutoJobsTest(unittest.TestCase):
+    def test_client_target_counts_each_receipt_once_and_stops_at_target(self):
+        self.jobs.stop(self.pack, self.key)
+        job = self.jobs.start(self.pack, 10, "mcp", "client-start", client="claude-code", target_tokens=10)
+        first = self.jobs.claim(self.pack, job["id"])
+        candidate = json.loads(first["prompt"].splitlines()[-1])
+        receipt = {"response_id": "native-response", "uncached_input_tokens": 5, "output_tokens": 2}
+        result = self.jobs.submit(self.pack, job["id"], 1, candidate, usage_receipt=receipt)
+        self.assertEqual(result["job"]["effective_tokens"], 7)
+        self.assertEqual(self.jobs.submit(self.pack, job["id"], 1, candidate, usage_receipt=receipt)["turn"], 2)
+        next_candidate = json.loads(result["prompt"].splitlines()[-1])
+        with self.assertRaisesRegex(ValueError, "Duplicate"):
+            self.jobs.submit(self.pack, job["id"], 2, next_candidate, usage_receipt=receipt)
+        final = self.jobs.submit(self.pack, job["id"], 2, next_candidate,
+                                 usage_receipt={**receipt, "response_id": "another-response"})
+        self.assertIsNone(final["prompt"])
+        self.assertEqual((final["job"]["effective_tokens"], final["job"]["end_reason"]), (14, "target"))
+        self.assertEqual(GameJobs(self.jobs.server).status(self.pack)["effective_tokens"], 14)
+
+    def test_missing_client_usage_saves_candidate_and_obeys_selected_limit(self):
+        self.jobs.stop(self.pack, self.key)
+        for target, expected in ((12, "stopped"), (None, "running")):
+            job = self.jobs.start(self.pack, 3, "mcp", client="antigravity", target_tokens=target)
+            task = self.jobs.claim(self.pack, job["id"])
+            result = self.jobs.submit(self.pack, job["id"], 1, json.loads(task["prompt"].splitlines()[-1]))
+            self.assertEqual((result["job"]["status"], result["job"]["completed"]), (expected, 1))
+            self.assertIsNone(result["job"]["effective_tokens"])
+            self.assertIsNone(result["job"]["recent_tokens_per_minute"])
+
     def setUp(self):
         temp = TemporaryDirectory()
         self.addCleanup(temp.cleanup)

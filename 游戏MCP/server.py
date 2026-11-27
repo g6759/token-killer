@@ -254,7 +254,8 @@ def make_server(port: int, read_only: bool = False, *, dispatch=game_request) ->
         "长轮次通过 report_progress 报告实际阶段及已检查的候选总数，网页可实时查看。"
         "根据题面生成候选并通过 submit_turn 提交；若有下一轮则接手并继续，任务结束后停止。"
         "单会话方格并行批次用 packing_batch_status 读取，再用 plan_packing_batch 按关下发策略。"
-        "检查当前普通套餐额度，使用同一会话的 CODEX_THREAD_ID，每轮等待真实本机结果后再规划。"
+        "只有 Codex 方格并行批次需要当前普通套餐读数与同一会话的 CODEX_THREAD_ID。"
+        "Claude Code 和 Antigravity 可直接领取普通 MCP 回合。仅有真实逐轮用量时附上 usage_receipt。"
         "仅在用户要求新开任务时使用 start_game 或 start_packing_batch。"
     )
     server = FastMCP(
@@ -346,16 +347,29 @@ def make_server(port: int, read_only: bool = False, *, dispatch=game_request) ->
                                        "summary": summary, "solution": solution})
 
     @server.tool(annotations=WRITE)
-    async def start_game(pack_id: Pack, rounds: Literal[1, 3, 5], request_id: RequestId) -> dict[str, Any]:
-        """按指定轮数开局。若游戏离线则后台启动并返回网页地址；重试请沿用同一个 request_id。"""
-        return await asyncio.to_thread(dispatch, pack_id, "/api/auto/start",
-                                      {"rounds": rounds, "mode": "mcp", "request_id": request_id})
+    async def start_game(pack_id: Pack, rounds: Literal[1, 3, 5, 10, 25, 100], request_id: RequestId,
+                         client: Literal["codex-mcp", "claude-code", "antigravity"] | None = None,
+                         target_tokens: PositiveInt | None = None) -> dict[str, Any]:
+        """Start a local game when requested. Set client for metering or more than 5 rounds.
+        target_tokens is optional and uses actual per-response usage receipts. Reuse request_id on retry."""
+        payload = {"rounds": rounds, "mode": "mcp", "request_id": request_id}
+        if client is not None:
+            payload["client"] = client
+        if target_tokens is not None:
+            payload["target_tokens"] = target_tokens
+        return await asyncio.to_thread(dispatch, pack_id, "/api/auto/start", payload)
 
     @server.tool(annotations=WRITE)
-    async def submit_turn(pack_id: Pack, job_id: JobId, turn: PositiveInt, candidate: dict) -> dict[str, Any]:
-        """将一份候选交给指定轮次的裁判，保存回执。按返回的下一轮题面继续，结束时停止。"""
+    async def submit_turn(pack_id: Pack, job_id: JobId, turn: PositiveInt, candidate: dict,
+                          usage_receipt: dict | None = None) -> dict[str, Any]:
+        """Submit a candidate and follow the returned next turn. For client runs only, optionally attach
+        actual per-response usage: response_id, uncached_input_tokens, output_tokens. Omit if unavailable.
+        Never estimate usage or supply session totals. A terminal response ends this game."""
+        payload = {"id": job_id, "turn": turn, "candidate": candidate}
+        if usage_receipt is not None:
+            payload["usage_receipt"] = usage_receipt
         return await asyncio.to_thread(dispatch, pack_id, "/api/auto/submit",
-                                      {"id": job_id, "turn": turn, "candidate": candidate})
+                                      payload)
 
     @server.tool(annotations=WRITE)
     async def stop_game(pack_id: Pack, job_id: JobId) -> dict[str, Any]:

@@ -17,6 +17,52 @@ import guided_search
 
 
 class BenchmarkTests(unittest.TestCase):
+    def test_session_meter_deduplicates_valid_receipts_and_rolls_sixty_seconds(self):
+        meter = benchmark.SessionMeter(150, started_at=100)
+        self.assertIsNone(meter.snapshot(at=110)["recent_tokens_per_minute"])
+        reply = {"response_id": "one", "usage": {"input_tokens": 90, "cached_input_tokens": 10, "output_tokens": 20}}
+        meter.add(reply, received_at=110)
+        meter.add(reply, received_at=111)
+        meter.add({"response_id": "missing", "usage": None}, received_at=112)
+        meter.add({"response_id": "invalid", "usage": {"input_tokens": 1, "cached_input_tokens": 2, "output_tokens": 500}}, received_at=113)
+        meter.add({"usage": reply["usage"]}, received_at=114)
+        self.assertEqual(meter.snapshot(at=120)["effective_tokens"], 100)
+        self.assertEqual(meter.snapshot(at=120)["recent_tokens_per_minute"], 300)
+        self.assertEqual(meter.snapshot(at=180)["recent_tokens_per_minute"], 0)
+        self.assertFalse(meter.reached.is_set())
+        meter.add({**reply, "response_id": "two"}, received_at=181)
+        self.assertTrue(meter.reached.is_set())
+        self.assertEqual(meter.snapshot(at=181)["target_progress"], 1)
+        with self.assertRaises(benchmark.TargetReached):
+            meter.dispatch(lambda: self.fail("must not dispatch"))
+
+    def test_receipt_metrics_deduplicate_ids_but_allow_later_valid_usage(self):
+        row = {"response_id": "same", "usage": {"input_tokens": 90, "cached_input_tokens": 10, "output_tokens": 20}}
+        result = benchmark.metrics([{**row, "usage": None}, row, row], 60, live=True)
+        self.assertEqual(result["metered_rounds"], 1)
+        self.assertEqual(result["tokens_per_minute"], 100)
+
+    def test_target_stops_without_polling_and_settles_both_inflight_lanes(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            packs = ("cap-set", "cap-set")
+            baselines = benchmark.snapshot_baselines(root, packs)
+            barrier = Barrier(2)
+            calls = []
+            meter = benchmark.SessionMeter(1)
+            def infer(request, seconds, abort, *, on_sent):
+                on_sent()
+                calls.append(request["lane"])
+                barrier.wait(timeout=5)
+                return {"text": "{}", "model": "fixture", "response_id": request["lane"],
+                        "usage": {"input_tokens": 10, "cached_input_tokens": 0, "output_tokens": 2}}
+            result = benchmark.run_window(root / "target", packs, baselines, infer,
+                                          seconds=600, live=True, session_meter=meter)
+            self.assertEqual(len(calls), 2)
+            self.assertEqual(result["stop"], "target")
+            self.assertEqual(meter.snapshot()["effective_tokens"], 24)
+            self.assertFalse(result["comparable"])
+
     def test_research_improvement_is_shared_by_web_scoreboard_and_next_window(self):
         import research_games
         import scoreboard

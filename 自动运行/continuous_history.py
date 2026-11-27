@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 import re
 
-from benchmark import WINDOWS, metrics
+from benchmark import WINDOWS, SessionMeter, metrics
 from workspace_io import read, save
 
 
@@ -18,9 +18,11 @@ def new_history_path(results):
     return folder / (datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f") + ".json")
 
 
-def write_history(path, scenario, window_limit, windows, *, end_reason=None, message=None):
+def write_history(path, scenario, window_limit, windows, *, end_reason=None, message=None,
+                  target_tokens=None, started_at=None):
     save(path, {"format": FORMAT, "scenario": scenario, "window_limit": window_limit,
-                "windows": [folder.name for folder in windows], "end_reason": end_reason, "message": message})
+                "windows": [folder.name for folder in windows], "end_reason": end_reason, "message": message,
+                "target_tokens": target_tokens, "started_at": started_at})
 
 
 def _read_mapping(path):
@@ -31,7 +33,7 @@ def _read_mapping(path):
     return value if isinstance(value, dict) else {}
 
 
-def _confirmed_receipts(group):
+def _confirmed_receipts(group, *, session_meter=None):
     timing = _read_mapping(group / "window.json")
     seconds = timing.get("seconds")
     if not timing.get("live") or type(seconds) is not int or seconds <= 0:
@@ -51,7 +53,12 @@ def _confirmed_receipts(group):
             continue
         response = reply.get("response_id")
         if isinstance(response, str) and response:
-            receipts.setdefault(response, {"usage": reply.get("usage")})
+            receipts.setdefault(response, {"response_id": response, "usage": reply.get("usage"), "received": elapsed})
+    if session_meter is not None:
+        for row in receipts.values():
+            stamp, elapsed = timing.get("started_at"), row.get("received")
+            session_meter.add(row, received_at=(stamp + elapsed if type(stamp) in (int, float)
+                              and type(elapsed) in (int, float) else 0))
     return metrics(list(receipts.values()), seconds, live=True)
 
 
@@ -98,7 +105,7 @@ def latest_history(results):
                        for window in windows)
         message = manifest.get("message") or next(
             (error for window in reversed(windows) for error in window.get("errors", ())), None)
-        return {"scenario": scenario, "window_limit": manifest.get("window_limit"), "window": len(names),
+        result = {"scenario": scenario, "window_limit": manifest.get("window_limit"), "window": len(names),
                 "completed": complete,
                 "last_window_rate": next((window_rate(w) for w in reversed(windows) if w.get("metered_rounds")), None),
                 "effective_tokens": sum(w.get("uncached_input_tokens", 0) + w.get("output_tokens", 0)
@@ -106,4 +113,19 @@ def latest_history(results):
                 "metered_rounds": sum(w.get("metered_rounds", 0) for w in windows),
                 "new_records": sum(w.get("project_records", 0) for w in windows),
                 "end_reason": manifest.get("end_reason") or "recovered", "message": message}
+        if manifest.get("target_tokens") is not None or manifest.get("started_at") is not None:
+            try:
+                meter = SessionMeter(manifest.get("target_tokens"), started_at=manifest.get("started_at"))
+            except ValueError:
+                continue
+            for folder in folders:
+                _confirmed_receipts(folder / scenario, session_meter=meter)
+            snapshot = meter.snapshot()
+            if not snapshot["metered_rounds"] and snapshot["target_tokens"] is None:
+                snapshot.pop("effective_tokens")
+                snapshot.pop("metered_rounds")
+            result.update(snapshot)
+            if result["target_reached"] and result["end_reason"] == "recovered":
+                result["end_reason"] = "target"
+        return result
     return None

@@ -12,6 +12,56 @@ import lab
 
 
 class LabTests(unittest.TestCase):
+    def test_target_does_not_extend_window_limit_or_invent_missing_usage(self):
+        with TemporaryDirectory() as directory:
+            def run(workspace, output, scenarios, *, session_meter, **kwargs):
+                session_meter.add({"response_id": "one", "usage": {"input_tokens": 10,
+                                  "cached_input_tokens": 0, "output_tokens": 0}})
+                return {"scenarios": {"single": {"live": True, "stop": "window", "errors": [],
+                    "uncached_input_tokens": 10, "output_tokens": 0, "metered_rounds": 1,
+                    "project_records": 0, "tokens_per_minute": 1}}, "incomplete": False, "stopped": False}
+            with lab.launch(Path(directory), register=False) as server, \
+                    patch.object(lab, "peek_setup_status", return_value={"ready": True}), \
+                    patch.object(lab, "live_suite", side_effect=run) as runner:
+                server.start("session", scenario="single", windows=1, target_tokens=100)
+                server.task.result(timeout=5)
+                runner.assert_called_once()
+                self.assertEqual(server.continuous["end_reason"], "limit")
+                self.assertFalse(server.continuous["target_reached"])
+                with patch.object(lab, "live_suite", return_value={"scenarios": {"single": {
+                    "live": True, "stop": "window", "errors": [], "metered_rounds": 0}},
+                    "incomplete": True, "stopped": False}):
+                    server.start("session", scenario="single", windows=3, target_tokens=100)
+                    server.task.result(timeout=5)
+                self.assertEqual(server.continuous["end_reason"], "interrupted")
+                self.assertEqual(server.continuous["effective_tokens"], 0)
+                self.assertIsNone(server.continuous["recent_tokens_per_minute"])
+
+    def test_target_accumulates_across_windows_and_stops_without_state_poll(self):
+        with TemporaryDirectory() as directory:
+            calls = []
+            def run(workspace, output, scenarios, *, session_meter, **kwargs):
+                calls.append(output)
+                session_meter.add({"response_id": "reply-" + str(len(calls)), "usage": {
+                    "input_tokens": 80, "cached_input_tokens": 0, "output_tokens": 20}})
+                entry = {"live": True, "stop": "target" if session_meter.reached.is_set() else "window",
+                         "uncached_input_tokens": 80, "output_tokens": 20, "metered_rounds": 1,
+                         "project_records": 0, "tokens_per_minute": 10, "wall_seconds": 600, "errors": []}
+                return {"scenarios": {"single": entry}, "incomplete": session_meter.reached.is_set(), "stopped": False}
+            with lab.launch(Path(directory), register=False) as server, \
+                    patch.object(lab, "peek_setup_status", return_value={"ready": True}), \
+                    patch.object(lab, "live_suite", side_effect=run):
+                for invalid in (True, 0, -1, 1.5, "10", 2**53):
+                    with self.assertRaises(ValueError):
+                        server.start("session", scenario="single", windows=3, target_tokens=invalid)
+                server.start("session", scenario="single", windows=3, target_tokens=150)
+                server.task.result(timeout=5)
+                self.assertEqual(len(calls), 2)
+                session = server.state()["continuous"]
+                self.assertEqual(session["end_reason"], "target")
+                self.assertEqual(session["effective_tokens"], 200)
+                self.assertTrue(session["target_reached"])
+
     def setUp(self):
         # All historical HTTP tests use a fixture; no account read or model call.
         from quota import QuotaGate, normalize_allowance
@@ -84,7 +134,7 @@ class LabTests(unittest.TestCase):
             browser = build_opener(ProxyHandler({}))
             outputs = []
 
-            def complete(workspace, output, scenarios, *, abort, before_infer):
+            def complete(workspace, output, scenarios, *, abort, before_infer, session_meter):
                 before_infer()
                 self.assertEqual(scenarios, {"mixed": lab.WINDOWS["mixed"]})
                 self.assertFalse(abort.is_set())
@@ -117,7 +167,8 @@ class LabTests(unittest.TestCase):
             with lab.launch(data, register=False) as restored:
                 status = restored.state()
                 self.assertEqual(status["run"], "idle")
-                self.assertEqual(status["continuous"], session)
+                for key in ("completed", "effective_tokens", "metered_rounds", "end_reason", "target_tokens"):
+                    self.assertEqual(status["continuous"][key], session[key])
 
     def test_continuous_record_run_keeps_partial_receipts_when_provider_stops(self):
         with TemporaryDirectory() as directory:
@@ -141,7 +192,7 @@ class LabTests(unittest.TestCase):
             data = Path(directory)
             written, release = Event(), Event()
 
-            def complete(workspace, output, scenarios, *, abort, before_infer):
+            def complete(workspace, output, scenarios, *, abort, before_infer, session_meter):
                 before_infer()
                 entry = {"stop": "window", "errors": [], "uncached_input_tokens": 28, "output_tokens": 11,
                          "metered_rounds": 3, "project_records": 0}

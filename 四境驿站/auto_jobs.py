@@ -19,6 +19,9 @@ from mission import ROUND_LIMITS
 
 
 ACTIVE = {"running", "stopping"}
+MCP_CLIENTS = {"codex-mcp": "Codex", "claude-code": "Claude Code", "antigravity": "Antigravity"}
+MCP_ROUNDS = (1, 3, 5, 10, 25, 100)
+MAX_SAFE_INTEGER = 2**53 - 1
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -31,6 +34,14 @@ def _view(job):
         "id", "pack_id", "mode", "rounds", "status", "stage", "message", "completed")}
     end = job.get("ended") or time.time()
     result["elapsed_seconds"] = round(max(0, end - job["started"]), 2)
+    if job.get("client"):
+        result.update(client=job["client"], target_tokens=job.get("target_tokens"), end_reason=job.get("end_reason"))
+        metered = [(r["at"], r["usage_receipt"]["uncached_input_tokens"] + r["usage_receipt"]["output_tokens"])
+                   for r in job["records"] if r.get("usage_receipt")]
+        seconds = max(0.001, min(60, end - job["started"]))
+        result.update(metered_rounds=len(metered), effective_tokens=sum(n for _, n in metered) if metered else None,
+                      recent_tokens_per_minute=(sum(n for at, n in metered if at > end - 60) * 60 / seconds
+                                                if metered else None))
     if job.get("profile"):
         result["profile"] = job["profile"]
     if job.get("work") and job["status"] == "running":
@@ -192,10 +203,18 @@ class GameJobs:
                             "local": "本机搜索中"}[job["mode"]]
             if job["completed"] and job["mode"] == "mcp":
                 job["stage"] = "等待 ChatGPT 提交下一轮"
+            if job.get("client"):
+                job["stage"] = "等待 " + MCP_CLIENTS[job["client"]] + " 接手当前轮"
 
-    def start(self, pack_id, rounds, mode, request_id=None, *, profile=None):
+    def start(self, pack_id, rounds, mode, request_id=None, *, profile=None, client=None, target_tokens=None):
         pack = self._pack(pack_id)
         allowed_rounds = ROUND_LIMITS
+        if client is not None:
+            if not isinstance(client, str) or client not in MCP_CLIENTS or mode != "mcp" or profile is not None:
+                raise ValueError("未知 MCP 客户端。 / Unknown MCP client.")
+            allowed_rounds = MCP_ROUNDS
+        if target_tokens is not None and (not client or type(target_tokens) is not int or not 1 <= target_tokens <= MAX_SAFE_INTEGER):
+            raise ValueError("有效 token 目标须为正整数。 / Enter a positive whole token target.")
         if profile is not None:
             setting = getattr(self.server, "job_profiles", {}).get(profile)
             if setting is None or pack != setting[0] or mode != "mcp":
@@ -216,12 +235,12 @@ class GameJobs:
                 if row:
                     old = json.loads(row[0])
                     initial = old.get("initial_rounds", old["rounds"])
-                    if (old["pack_id"], old["mode"], initial, old.get("profile")) != (pack, mode, rounds, profile):
+                    if (old["pack_id"], old["mode"], initial, old.get("profile"), old.get("client"), old.get("target_tokens")) != (pack, mode, rounds, profile, client, target_tokens):
                         raise ValueError("该请求编号已经用于另一局。")
                     return _view(old)
             old = self._latest(db, pack)
             if old and old["status"] in ACTIVE:
-                if (old["rounds"], old["mode"], old.get("profile")) == (rounds, mode, profile):
+                if (old["rounds"], old["mode"], old.get("profile"), old.get("client"), old.get("target_tokens")) == (rounds, mode, profile, client, target_tokens):
                     if request_id is not None:
                         db.execute("INSERT INTO start_requests VALUES (?,?)", (request_id, old["id"]))
                     return _view(old)
@@ -234,6 +253,8 @@ class GameJobs:
                    "message": "", "records": []}
             if profile is not None:
                 job["profile"] = profile
+            if client is not None:
+                job.update(client=client, target_tokens=target_tokens)
             self._next(job)
             db.execute("INSERT INTO jobs VALUES (?,?,?,?)", (job["id"], pack, request_id, _encode(job)))
         result = _view(job)
@@ -316,7 +337,7 @@ class GameJobs:
             result["missing"] = rated["missing"]
         return result
 
-    def submit(self, pack_id, id, turn, candidate, *, local=False, model_response=None):
+    def submit(self, pack_id, id, turn, candidate, *, local=False, model_response=None, usage_receipt=None):
         if type(turn) is not int or not isinstance(candidate, dict):
             raise ValueError("提交需要正确的轮号和候选对象。")
         _disk(self.file)
@@ -325,16 +346,28 @@ class GameJobs:
             mode = "codex" if model_response is not None else ("local" if local else "mcp")
             if job["mode"] != mode:
                 raise ValueError("提交入口与本局模式不符。")
+            if usage_receipt is not None:
+                if (not job.get("client") or not isinstance(usage_receipt, dict)
+                        or set(usage_receipt) != {"response_id", "uncached_input_tokens", "output_tokens"}
+                        or not isinstance(usage_receipt["response_id"], str)
+                        or not 1 <= len(usage_receipt["response_id"].strip()) <= 256
+                        or any(type(usage_receipt[k]) is not int or not 0 <= usage_receipt[k] <= MAX_SAFE_INTEGER
+                               for k in ("uncached_input_tokens", "output_tokens"))):
+                    raise ValueError("客户端回执字段无效。 / Invalid client usage receipt.")
             if 1 <= turn <= job["completed"]:
-                if job["records"][turn-1]["candidate"] != candidate:
+                previous = job["records"][turn - 1]
+                if previous["candidate"] != candidate or previous.get("usage_receipt") != usage_receipt:
                     raise ValueError("这轮已经收到另一份方案。")
                 return self._task(job)
             if job["status"] != "running" or turn != job["completed"] + 1:
                 raise ValueError("游戏已停止或轮号不正确。")
+            if usage_receipt and any((r.get("usage_receipt") or {}).get("response_id") == usage_receipt["response_id"]
+                                     for r in job["records"]):
+                raise ValueError("用量回执 ID 重复。 / Duplicate usage receipt ID.")
             wrong_parent = candidate.get("pack_id") != pack_id or candidate.get("parent_hash") != job["parent"]
             if wrong_parent and mode != "codex":
                 raise ValueError("请使用本轮题面中的题号和父档。")
-            author = {"mcp": "ChatGPT · MCP", "local": "本机自动搜索", "codex": "ChatGPT 订阅自动运行"}[mode]
+            author = {"mcp": MCP_CLIENTS.get(job.get("client"), "ChatGPT · MCP"), "local": "本机自动搜索", "codex": "ChatGPT 订阅自动运行"}[mode]
             with self.server.submit_lock:
                 try:
                     if wrong_parent:
@@ -353,8 +386,15 @@ class GameJobs:
                         job["records"][-1]["work"] = job["work"]
                 if model_response is not None:
                     job["records"][-1]["model_response"] = model_response
+                if usage_receipt:
+                    job["records"][-1]["usage_receipt"] = usage_receipt
                 job.update(completed=turn, message=message)
                 self._next(job)
+                target = job.get("target_tokens")
+                if target and usage_receipt is None:
+                    job.update(status="stopped", end_reason="unmetered", stage="缺少用量回执", ended=time.time())
+                elif target and _view(job)["effective_tokens"] >= target:
+                    job.update(status="completed", end_reason="target", stage="已达目标", ended=time.time())
             self._save(db, job)
         return self._task(job)
 

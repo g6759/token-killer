@@ -287,6 +287,10 @@ class SoloHandler(BaseHTTPRequestHandler):
             payload = self._read_body()
             if target.path.endswith("/start") and isinstance(payload, dict) and "request_id" in payload:
                 keys = keys | {"request_id"}
+            if target.path == "/api/auto/start" and isinstance(payload, dict):
+                keys = keys | ({"client", "target_tokens"} & payload.keys())
+            if target.path == "/api/auto/submit" and isinstance(payload, dict) and "usage_receipt" in payload:
+                keys = keys | {"usage_receipt"}
             if target.path == "/api/auto/claim" and isinstance(payload, dict) and "thread_id" in payload:
                 keys = keys | {"thread_id"}
             if not isinstance(payload, dict) or payload.keys() != keys:
