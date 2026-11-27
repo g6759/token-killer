@@ -179,7 +179,7 @@ class LabQuotaTests(unittest.TestCase):
 
     def test_session_explicit_scenario_and_finite_windows(self):
         seen = []
-        def complete(workspace, directory, scenarios, *, abort, before_infer):
+        def complete(workspace, directory, scenarios, *, abort, before_infer, session_meter):
             before_infer()
             seen.append(list(scenarios))
             entry = {"stop": "window", "errors": [], "uncached_input_tokens": 20,
@@ -206,7 +206,7 @@ class LabQuotaTests(unittest.TestCase):
     def test_between_window_unknown_keeps_first_receipts_and_stops(self):
         reads = [quota.normalize_allowance(payload()), quota.normalize_allowance(payload()),
                  quota.normalize_allowance({})]
-        def complete(workspace, directory, scenarios, *, abort, before_infer):
+        def complete(workspace, directory, scenarios, *, abort, before_infer, session_meter):
             before_infer()
             return {"live": True, "incomplete": False, "stopped": False, "scenarios": {
                 "mixed": {"stop": "window", "errors": [], "uncached_input_tokens": 7,
@@ -224,7 +224,7 @@ class LabQuotaTests(unittest.TestCase):
         self.server.quota.max_age = 0.01
         reads = [quota.normalize_allowance(payload()), quota.normalize_allowance(payload()),
                  quota.normalize_allowance({})]
-        def complete(workspace, directory, scenarios, *, abort, before_infer):
+        def complete(workspace, directory, scenarios, *, abort, before_infer, session_meter):
             self.assertTrue(abort.wait(2), "quota watcher did not stop an active window")
             return {"live": True, "incomplete": True, "stopped": True, "scenarios": {
                 "mixed": {"stop": "stopped", "errors": [], "uncached_input_tokens": 11,
